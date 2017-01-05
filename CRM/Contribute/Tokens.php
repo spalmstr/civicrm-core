@@ -4,7 +4,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -109,7 +109,18 @@ class CRM_Contribute_Tokens extends \Civi\Token\AbstractTokenSubscriber {
   }
 
   /**
-   * @inheritDoc
+   * Evaluate the content of a single token.
+   *
+   * @param \Civi\Token\TokenRow $row
+   *   The record for which we want token values.
+   * @param string $entity
+   * @param string $field
+   *   The name of the token field.
+   * @param mixed $prefetch
+   *   Any data that was returned by the prefetch().
+   *
+   * @return mixed
+   * @throws \CRM_Core_Exception
    */
   public function evaluateToken(\Civi\Token\TokenRow $row, $entity, $field, $prefetch = NULL) {
     $actionSearchResult = $row->context['actionSearchResult'];

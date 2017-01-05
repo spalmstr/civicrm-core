@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -164,13 +164,7 @@
                         <a href="{crmURL p='civicrm/contact/view' q="reset=1&cid=$contactId&selectedChild=tag"}"
                            title="{ts}Edit Tags{/ts}">{ts}Tags{/ts}</a>
                       </div>
-                      <div class="crm-content" id="tags">
-                        {foreach from=$contactTag item=tagName key=tagId}
-                          <span class="crm-tag-item" {if !empty($allTags.$tagId.color)}style="background-color: {$allTags.$tagId.color}; color: {$allTags.$tagId.color|colorContrast};"{/if}>
-                            {$tagName}
-                          </span>
-                        {/foreach}
-                      </div>
+                      <div class="crm-content" id="tags">{$contactTag}</div>
                     </div>
                     <div class="crm-summary-row">
                       <div class="crm-label">{ts}Contact Type{/ts}</div>

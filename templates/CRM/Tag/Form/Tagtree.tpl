@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -29,9 +29,7 @@
     <li id="tag_{$id}">
       <input name="tagList[{$id}]" id="check_{$id}" type="checkbox" {if $node.is_selectable EQ 0}disabled=""{/if} {if $tagged[$id]}checked="checked"{/if}/>
       <span>
-        <label for="check_{$id}" id="tagLabel_{$id}" {if !empty($allTags.$id.color)}style="background-color: {$allTags.$id.color}; color: {$allTags.$id.color|colorContrast};"{/if}>
-          {$node.name}
-        </label>
+        <label for="check_{$id}" id="tagLabel_{$id}">{$node.name}</label>
         {if $node.description}{help id=$id title=$node.name file="CRM/Tag/Form/Tagtree"}{/if}
       </span>
       {if $node.children}

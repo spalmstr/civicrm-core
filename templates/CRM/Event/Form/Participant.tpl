@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -138,13 +138,13 @@
    .focus(
      function() {
        feeAmount = cj(this).val();
-       feeAmount = Number(feeAmount.replace(/[^0-9\.]+/g,""));
+       feeAmount = parseInt(feeAmount);
      }
    )
    .change(
     function() {
       userModifiedAmount = cj(this).val();
-      userModifiedAmount = Number(userModifiedAmount.replace(/[^0-9\.]+/g,""));
+      userModifiedAmount = parseInt(userModifiedAmount);
       if (userModifiedAmount < feeAmount) {
         cj('#status_id').val(partiallyPaidStatusId).change();
       }
@@ -330,7 +330,7 @@
   {* JS block for ADD or UPDATE actions only *}
   {if $action eq 1 or $action eq 2}
     {if $participantId and $hasPayment}
-      {include file="CRM/Contribute/Page/PaymentInfo.tpl" show='payments'}
+      {include file="CRM/Contribute/Page/PaymentInfo.tpl" show='event-payment'}
     {/if}
 
     {*include custom data js file*}

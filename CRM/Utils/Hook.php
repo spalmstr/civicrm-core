@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CiviCRM_Hook
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 abstract class CRM_Utils_Hook {
 
@@ -893,23 +893,6 @@ abstract class CRM_Utils_Hook {
     return self::singleton()->invoke(3, $form, $groups, $mailings,
       self::$_nullObject, self::$_nullObject, self::$_nullObject,
       'civicrm_mailingGroups'
-    );
-  }
-
-  /**
-   * (Experimental) Modify the list of template-types used for CiviMail composition.
-   *
-   * @param array $types
-   *   Sequentially indexed list of template types. Each type specifies:
-   *     - name: string
-   *     - editorUrl: string, Angular template URL
-   *     - weight: int, priority when picking a default value for new mailings
-   * @return mixed
-   */
-  public static function mailingTemplateTypes(&$types) {
-    return self::singleton()->invoke(1, $types, self::$_nullObject, self::$_nullObject,
-      self::$_nullObject, self::$_nullObject, self::$_nullObject,
-      'civicrm_mailingTemplateTypes'
     );
   }
 

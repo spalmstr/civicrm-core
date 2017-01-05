@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 
 /**
@@ -244,11 +244,12 @@ class CRM_Case_Form_Case extends CRM_Core_Form {
       )), TRUE
     );
 
-    $tags = CRM_Core_BAO_Tag::getColorTags('civicrm_case');
+    CRM_Core_BAO_Tag::getTags('civicrm_case', $tags, NULL,
+      '&nbsp;&nbsp;', TRUE);
 
     if (!empty($tags)) {
-      $this->add('select2', 'tag', ts('Tags'), $tags, FALSE,
-        array('class' => 'huge', 'multiple' => 'multiple')
+      $this->add('select', 'tag', ts('Select Tags'), $tags, FALSE,
+        array('id' => 'tags', 'multiple' => 'multiple', 'class' => 'crm-select2')
       );
     }
 
@@ -370,9 +371,6 @@ class CRM_Case_Form_Case extends CRM_Core_Form {
     $tagParams = array();
     if (!empty($params['tag'])) {
       $tagParams = array();
-      if (!is_array($params['tag'])) {
-        $params['tag'] = explode(',', $params['tag']);
-      }
       foreach ($params['tag'] as $tag) {
         $tagParams[$tag] = 1;
       }

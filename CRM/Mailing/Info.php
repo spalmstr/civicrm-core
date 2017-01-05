@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -31,7 +31,7 @@
  * abstract class.
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 class CRM_Mailing_Info extends CRM_Core_Component_Info {
 
@@ -166,7 +166,6 @@ class CRM_Mailing_Info extends CRM_Core_Component_Info {
     CRM_Core_Resources::singleton()
       ->addSetting(array(
         'crmMailing' => array(
-          'templateTypes' => CRM_Mailing_BAO_Mailing::getTemplateTypes(),
           'civiMails' => $civiMails['values'],
           'campaignEnabled' => in_array('CiviCampaign', $config->enableComponents),
           'groupNames' => $groupNames['values'],

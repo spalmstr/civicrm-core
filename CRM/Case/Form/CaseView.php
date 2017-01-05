@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 
 /**
@@ -343,28 +343,28 @@ class CRM_Case_Form_CaseView extends CRM_Core_Form {
       $this->assign('hookCaseSummary', $hookCaseSummary);
     }
 
-    $allTags = CRM_Core_BAO_Tag::getColorTags('civicrm_case');
+    CRM_Core_BAO_Tag::getTags('civicrm_case', $allTags, NULL,
+      '&nbsp;&nbsp;', TRUE);
 
     if (!empty($allTags)) {
-      $this->add('select2', 'case_tag', ts('Tags'), $allTags, FALSE,
-        array('id' => 'tags', 'multiple' => 'multiple')
+      $this->add('select', 'case_tag', ts('Tags'), $allTags, FALSE,
+        array('id' => 'tags', 'multiple' => 'multiple', 'class' => 'crm-select2')
       );
 
       $tags = CRM_Core_BAO_EntityTag::getTag($this->_caseID, 'civicrm_case');
 
+      $this->setDefaults(array('case_tag' => $tags));
+
       foreach ($tags as $tid) {
-        $tagInfo = CRM_Utils_Array::findInTree($tid, $allTags);
-        if ($tagInfo) {
-          $tags[$tid] = $tagInfo;
+        if (isset($allTags[$tid])) {
+          $tags[$tid] = $allTags[$tid];
         }
         else {
           unset($tags[$tid]);
         }
       }
 
-      $this->setDefaults(array('case_tag' => implode(',', array_keys($tags))));
-
-      $this->assign('tags', $tags);
+      $this->assign('tags', implode(', ', array_filter($tags)));
       $this->assign('showTags', TRUE);
     }
     else {

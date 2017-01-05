@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 
 /**
@@ -194,20 +194,15 @@ class CRM_Contact_Form_Search_Advanced extends CRM_Contact_Form_Search {
    *   the default array reference
    */
   public function setDefaultValues() {
-    // Set ssID for unit tests.
-    if (empty($this->_ssID)) {
-      $this->_ssID = $this->get('ssID');
-    }
-
-    $defaults = array_merge($this->_formValues, array(
-      'privacy_toggle' => 1,
-      'operator' => 'AND',
-    ));
+    $defaults = $this->_formValues;
     $this->normalizeDefaultValues($defaults);
 
     if ($this->_context === 'amtg') {
       $defaults['task'] = CRM_Contact_Task::GROUP_CONTACTS;
     }
+
+    $defaults['privacy_toggle'] = 1;
+    $defaults['operator'] = 'AND';
 
     return $defaults;
   }
@@ -348,7 +343,6 @@ class CRM_Contact_Form_Search_Advanced extends CRM_Contact_Form_Search {
       'activity_type_id',
       'status_id',
       'activity_subject',
-      'activity_details',
       'contribution_page_id',
       'contribution_product_id',
       'payment_instrument_id',

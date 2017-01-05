@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  * $Id$
  *
  */
@@ -162,16 +162,18 @@ class CRM_Price_BAO_LineItem extends CRM_Price_DAO_LineItem {
   }
 
   /**
-   * @param int $contributionId
+   * @param int $entityId
+   * @param $entityTable
    *
    * @return null|string
    */
-  public static function getLineTotal($contributionId) {
+  public static function getLineTotal($entityId, $entityTable) {
     $sqlLineItemTotal = "SELECT SUM(li.line_total + COALESCE(li.tax_amount,0))
 FROM civicrm_line_item li
-WHERE li.contribution_id = %1";
-    $params = array(1 => array($contributionId, 'Integer'));
-    $lineItemTotal = CRM_Core_DAO::singleValueQuery($sqlLineItemTotal, $params);
+WHERE li.entity_table = '{$entityTable}'
+AND li.entity_id = {$entityId}
+";
+    $lineItemTotal = CRM_Core_DAO::singleValueQuery($sqlLineItemTotal);
     return $lineItemTotal;
   }
 

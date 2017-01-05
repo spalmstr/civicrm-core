@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 
 /**
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 class CRM_Event_BAO_Participant extends CRM_Event_DAO_Participant {
 
@@ -2035,7 +2035,11 @@ WHERE (li.entity_table = 'civicrm_participant' AND li.entity_id = {$participantI
     // the recordAdjustedAmt code would execute over here
     $ids = CRM_Event_BAO_Participant::getParticipantIds($contributionId);
     if (count($ids) > 1) {
-      $updatedAmount = CRM_Price_BAO_LineItem::getLineTotal($contributionId);
+      $total = 0;
+      foreach ($ids as $val) {
+        $total += CRM_Price_BAO_LineItem::getLineTotal($val, 'civicrm_participant');
+      }
+      $updatedAmount = $total;
     }
     else {
       $updatedAmount = $params['amount'];

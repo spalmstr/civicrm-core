@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 class CRM_Contribute_BAO_Contribution extends CRM_Contribute_DAO_Contribution {
 
@@ -3101,8 +3101,8 @@ INNER JOIN civicrm_activity ON civicrm_activity_contact.activity_id = civicrm_ac
     if ($contributionStatus == 'Partially paid'
       && !empty($params['partial_payment_total']) && !empty($params['partial_amount_pay'])
     ) {
-      $partialAmtPay = CRM_Utils_Rule::cleanMoney($params['partial_amount_pay']);
-      $partialAmtTotal = CRM_Utils_Rule::cleanMoney($params['partial_payment_total']);
+      $partialAmtPay = $params['partial_amount_pay'];
+      $partialAmtTotal = $params['partial_payment_total'];
 
       $relationTypeId = key(CRM_Core_PseudoConstant::accountOptionValues('account_relationship', NULL, " AND v.name LIKE 'Accounts Receivable Account is' "));
       $fromFinancialAccountId = CRM_Contribute_PseudoConstant::financialAccountType($params['financial_type_id'], $relationTypeId);
@@ -3785,7 +3785,7 @@ INNER JOIN civicrm_activity ON civicrm_activity_contact.activity_id = civicrm_ac
     $defaults = array();
     $contributionDAO = CRM_Contribute_BAO_Contribution::retrieve($getInfoOf, $defaults, CRM_Core_DAO::$_nullArray);
     if (!$participantId) {
-      $participantId = CRM_Core_DAO::getFieldValue('CRM_Event_DAO_ParticipantPayment', $contributionId, 'participant_id', 'contribution_id');
+      $participantId = CRM_Core_DAO::getFieldValue('CRM_Event_DAO_ParticipantPayment', $contributionId, 'participant_id');
     }
 
     if ($paymentType == 'owed') {
@@ -3939,10 +3939,6 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
         $entityObj = CRM_Event_BAO_Participant::getValues($inputParams, $values, $ids);
         $entityObj = $entityObj[$participantId];
       }
-      else {
-        $entityObj = $contributionDAO;
-        $component = 'contribution';
-      }
       $activityType = ($paymentType == 'refund') ? 'Refund' : 'Payment';
 
       self::addActivityForPayment($entityObj, $financialTrxn, $activityType, $component, $contributionId);
@@ -3961,17 +3957,14 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
    */
   public static function addActivityForPayment($entityObj, $trxnObj, $activityType, $component, $contributionId) {
     if ($component == 'event') {
-      $title = CRM_Core_DAO::getFieldValue('CRM_Event_BAO_Event', $entityObj->event_id, 'title');
+      $date = CRM_Utils_Date::isoToMysql($trxnObj->trxn_date);
+      $paymentAmount = CRM_Utils_Money::format($trxnObj->total_amount, $trxnObj->currency);
+      $eventTitle = CRM_Core_DAO::getFieldValue('CRM_Event_BAO_Event', $entityObj->event_id, 'title');
+      $subject = "{$paymentAmount} - Offline {$activityType} for {$eventTitle}";
+      $targetCid = $entityObj->contact_id;
+      // source record id would be the contribution id
+      $srcRecId = $contributionId;
     }
-    else {
-      $title = ts('Contribution');
-    }
-    $paymentAmount = CRM_Utils_Money::format($trxnObj->total_amount, $trxnObj->currency);
-    $subject = "{$paymentAmount} - Offline {$activityType} for {$title}";
-    $date = CRM_Utils_Date::isoToMysql($trxnObj->trxn_date);
-    $targetCid = $entityObj->contact_id;
-    // source record id would be the contribution id
-    $srcRecId = $contributionId;
 
     // activity params
     $activityParams = array(
@@ -4039,7 +4032,17 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
       $baseTrxnId = $baseTrxnId['financialTrxnId'];
     }
     if (!CRM_Utils_Array::value('total_amount', $total) || $usingLineTotal) {
-      $total = CRM_Price_BAO_LineItem::getLineTotal($contributionId);
+      // for additional participants
+      if ($entityTable == 'civicrm_participant') {
+        $ids = CRM_Event_BAO_Participant::getParticipantIds($contributionId);
+        $total = 0;
+        foreach ($ids as $val) {
+          $total += CRM_Price_BAO_LineItem::getLineTotal($val, $entityTable);
+        }
+      }
+      else {
+        $total = CRM_Price_BAO_LineItem::getLineTotal($id, $entityTable);
+      }
     }
     else {
       $baseTrxnId = $total['trxn_id'];
@@ -4065,6 +4068,9 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
     $info['payLater'] = $contributionIsPayLater;
     $rows = array();
     if ($getTrxnInfo && $baseTrxnId) {
+      $arRelationTypeId = key(CRM_Core_PseudoConstant::accountOptionValues('account_relationship', NULL, " AND v.name LIKE 'Accounts Receivable Account is' "));
+      $arAccount = CRM_Contribute_PseudoConstant::financialAccountType($financialTypeId, $arRelationTypeId);
+
       // Need to exclude fee trxn rows so filter out rows where TO FINANCIAL ACCOUNT is expense account
       $sql = "
         SELECT GROUP_CONCAT(fa.`name`) as financial_account,
@@ -4076,15 +4082,16 @@ WHERE eft.financial_trxn_id IN ({$trxnId}, {$baseTrxnId['financialTrxnId']})
           LEFT JOIN civicrm_entity_financial_trxn eft ON (eft.entity_id = con.id AND eft.entity_table = 'civicrm_contribution')
           INNER JOIN civicrm_financial_trxn ft ON ft.id = eft.financial_trxn_id
             AND ft.to_financial_account_id != %2
-          LEFT JOIN civicrm_entity_financial_trxn ef ON (ef.financial_trxn_id = ft.id AND ef.entity_table = 'civicrm_financial_item')
+          INNER JOIN civicrm_entity_financial_trxn ef ON (ef.financial_trxn_id = ft.id AND ef.entity_table = 'civicrm_financial_item')
           LEFT JOIN civicrm_financial_item fi ON fi.id = ef.entity_id
-          LEFT JOIN civicrm_financial_account fa ON fa.id = fi.financial_account_id
+          INNER JOIN civicrm_financial_account fa ON fa.id = fi.financial_account_id
 
-        WHERE con.id = %1 AND ft.is_payment = 1
+        WHERE con.id = %1 AND ft.to_financial_account_id <> %3
         GROUP BY ft.id";
       $queryParams = array(
         1 => array($contributionId, 'Integer'),
         2 => array($feeFinancialAccount, 'Integer'),
+        3 => array($arAccount, 'Integer'),
       );
       $resultDAO = CRM_Core_DAO::executeQuery($sql, $queryParams);
       $statuses = CRM_Contribute_PseudoConstant::contributionStatus();
@@ -5327,53 +5334,6 @@ LEFT JOIN  civicrm_contribution on (civicrm_contribution.contact_id = civicrm_co
     $trxn = CRM_Core_BAO_FinancialTrxn::create($params);
     self::$_trxnIDs[] = $trxn->id;
     $trxnParams['from_financial_account_id'] = $params['to_financial_account_id'];
-  }
-
-  /**
-   * Calculate financial item amount when contribution is updated.
-   *
-   * @param array $params
-   *   contribution params
-   * @param array $amountParams
-   *
-   * @param string $context
-   *
-   * @return float
-   */
-  public static function calculateFinancialItemAmount($params, $amountParams, $context) {
-    if (!empty($params['is_quick_config'])) {
-      $amount = $amountParams['item_amount'];
-      if (!$amount) {
-        $amount = $params['total_amount'];
-        if ($context === NULL) {
-          $amount -= CRM_Utils_Array::value('tax_amount', $params, 0);
-        }
-      }
-    }
-    else {
-      $amount = $amountParams['line_total'];
-      if ($context == 'changedAmount') {
-        $amount -= $amountParams['previous_line_total'];
-      }
-      $amount *= $amountParams['diff'];
-    }
-    return $amount;
-  }
-
-  /**
-   * Calculate net amount.
-   *
-   * @param array $netAmount
-   *
-   * @param float $taxAmount
-   *
-   * @return array
-   */
-  public static function calculateNetAmount($netAmount, $taxAmount) {
-    if ($taxAmount) {
-      $netAmount -= $taxAmount;
-    }
-    return CRM_Utils_Money::format($netAmount, NULL, '%a');
   }
 
 }

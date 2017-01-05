@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -141,21 +141,10 @@ abstract class AbstractTokenSubscriber implements EventSubscriberInterface {
     if (!$this->checkActive($e->getTokenProcessor())) {
       return;
     }
-
-    $messageTokens = $e->getTokenProcessor()->getMessageTokens();
-    if (!isset($messageTokens[$this->entity])) {
-      return;
-    }
-
-    $activeTokens = array_intersect($messageTokens[$this->entity], array_keys($this->tokenNames));
-    if (empty($activeTokens)) {
-      return;
-    }
-
+    // TODO: check if any tokens for $entity are actually used; short-circuit.
     $prefetch = $this->prefetch($e);
-
     foreach ($e->getRows() as $row) {
-      foreach ($activeTokens as $field) {
+      foreach ($this->tokenNames as $field => $label) {
         $this->evaluateToken($row, $this->entity, $field, $prefetch);
       }
     }

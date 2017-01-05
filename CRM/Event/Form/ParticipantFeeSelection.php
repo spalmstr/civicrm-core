@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  * $Id$
  *
  */
@@ -106,9 +106,14 @@ class CRM_Event_Form_ParticipantFeeSelection extends CRM_Core_Form {
 
     $ids = CRM_Event_BAO_Participant::getParticipantIds($this->_contributionId);
     if (count($ids) > 1) {
-      $total = CRM_Price_BAO_LineItem::getLineTotal($this->_contributionId);
+      $total = 0;
+      foreach ($ids as $val) {
+        $total += CRM_Price_BAO_LineItem::getLineTotal($val, 'civicrm_participant');
+      }
       $this->assign('totalLineTotal', $total);
-      $this->assign('lineItemTotal', $total);
+
+      $lineItemTotal = CRM_Price_BAO_LineItem::getLineTotal($this->_participantId, 'civicrm_participant');
+      $this->assign('lineItemTotal', $lineItemTotal);
     }
 
     $title = ts("Change selections for %1", array(1 => $this->_contributorDisplayName));

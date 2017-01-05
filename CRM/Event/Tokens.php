@@ -4,7 +4,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -63,7 +63,11 @@ class CRM_Event_Tokens extends \Civi\Token\AbstractTokenSubscriber {
   }
 
   /**
-   * @inheritDoc
+   * Check something about being active.
+   *
+   * @param \Civi\Token\TokenProcessor $processor
+   *
+   * @return bool
    */
   public function checkActive(\Civi\Token\TokenProcessor $processor) {
     // Extracted from scheduled-reminders code. See the class description.
@@ -91,7 +95,17 @@ LEFT JOIN civicrm_phone phone ON phone.id = lb.phone_id
   }
 
   /**
-   * @inheritDoc
+   * Evaluate the content of a single token.
+   *
+   * @param \Civi\Token\TokenRow $row
+   *   The record for which we want token values.
+   * @param string $entity
+   * @param string $field
+   *   The name of the token field.
+   * @param mixed $prefetch
+   *   Any data that was returned by the prefetch().
+   *
+   * @return mixed
    */
   public function evaluateToken(\Civi\Token\TokenRow $row, $entity, $field, $prefetch = NULL) {
     $actionSearchResult = $row->context['actionSearchResult'];

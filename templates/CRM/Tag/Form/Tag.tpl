@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -26,7 +26,7 @@
 {* this template is used for adding/editing tags  *}
 {literal}
 <style>
-  #tagtree .highlighted {
+  #tagtree .highlighted > span {
     background-color: #fefca6;
   }
   #tagtree .helpicon ins {
@@ -45,18 +45,16 @@
     CRM.updateContactSummaryTags = function() {
       var tags = [];
       $('#tagtree input:checkbox:checked+span label').each(function() {
-        tags.push('<span class="crm-tag-item" style="' + $(this).attr('style') + '">' + $(this).text() + '</span>');
+        tags.push($(this).text());
       });
       $('input.crm-contact-tagset').each(function() {
         var setTags = _.pluck($(this).select2('data'), 'label');
-        $.each(setTags, function (i, item) {
-          tags.push('<span class="crm-tag-item">' + item + '</span>');
-        });
+        tags = tags.concat(setTags);
       });
       // contact summary tabs and search forms both listen for this event
       $($form).closest('.crm-ajax-container').trigger('crmFormSuccess', {tabCount: tags.length});
       // update summary tab
-      $("#contact-summary #tags").html(tags.join(' '));
+      $("#contact-summary #tags").html(tags.join(', '));
     };
 
     $(function() {

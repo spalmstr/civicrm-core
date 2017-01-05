@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2016
  */
 
 /**
@@ -164,12 +164,10 @@ WHERE t2.id IS NULL {$reservedClause}";
 
     $usedFor = CRM_Core_OptionGroup::values('tag_used_for');
 
-    $query = " SELECT t1.name, t1.id, t2.name as parent, t1.description, t1.used_for, t1.is_tagset as is_tagset,
-                      t1.is_reserved, t1.parent_id, t1.used_for, t1.color, t2.is_tagset as is_tagset_child, t2.parent_id as grandparent_id
-               FROM civicrm_tag t1
-               LEFT JOIN civicrm_tag t2 ON t1.parent_id = t2.id
-               LEFT JOIN civicrm_tag t3 ON t2.parent_id = t3.id
-               ORDER BY CONCAT(IFNULL(t3.name, ''), IFNULL(t2.name, ''), t1.name)";
+    $query = "SELECT t1.name, t1.id, t2.name as parent, t1.description, t1.used_for, t1.is_tagset,
+                        t1.is_reserved, t1.parent_id, t1.used_for
+                 FROM civicrm_tag t1 LEFT JOIN civicrm_tag t2 ON t1.parent_id = t2.id
+                 GROUP BY t1.parent_id, t1.id";
 
     $tag = CRM_Core_DAO::executeQuery($query);
     $values = array();
@@ -188,7 +186,9 @@ WHERE t2.id IS NULL {$reservedClause}";
         }
       }
 
-      $values[$tag->id]['used_for'] = implode(", ", $used);
+      if (!empty($used)) {
+        $values[$tag->id]['used_for'] = implode(", ", $used);
+      }
 
       $newAction = $action;
       if ($values[$tag->id]['is_reserved']) {

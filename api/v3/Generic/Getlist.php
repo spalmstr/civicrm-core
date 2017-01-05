@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -88,7 +88,6 @@ function _civicrm_api3_generic_getList_defaults($entity, &$request, $apiDefaults
     'page_num' => 1,
     'input' => '',
     'image_field' => NULL,
-    'color_field' => isset($fields['color']) ? 'color' : NULL,
     'id_field' => $entity == 'option_value' ? 'value' : 'id',
     'description_field' => array(),
     'params' => array(),
@@ -150,9 +149,6 @@ function _civicrm_api3_generic_getlist_params(&$request) {
   if (!empty($request['image_field'])) {
     $fieldsToReturn[] = $request['image_field'];
   }
-  if (!empty($request['color_field'])) {
-    $fieldsToReturn[] = $request['color_field'];
-  }
   if (!empty($request['description_field'])) {
     $fieldsToReturn = array_merge($fieldsToReturn, (array) $request['description_field']);
   }
@@ -196,9 +192,6 @@ function _civicrm_api3_generic_getlist_output($result, $request, $entity, $field
       };
       if (!empty($request['image_field'])) {
         $data['image'] = isset($row[$request['image_field']]) ? $row[$request['image_field']] : '';
-      }
-      if (isset($row[$request['color_field']])) {
-        $data['color'] = $row[$request['color_field']];
       }
       $output[] = $data;
     }

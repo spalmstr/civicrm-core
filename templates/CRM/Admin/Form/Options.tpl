@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2016                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -133,18 +133,6 @@
                 <td class="label">{$form.weight.label}</td>
                 <td>{$form.weight.html}</td>
               </tr>
-        {if $form.icon.html}
-          <tr class="crm-admin-options-form-block-icon">
-            <td class="label">{$form.icon.label}</td>
-            <td>{$form.icon.html}</td>
-          </tr>
-        {/if}
-        {if $form.color.html}
-          <tr class="crm-admin-options-form-block-color">
-            <td class="label">{$form.color.label}</td>
-            <td>{$form.color.html}</td>
-          </tr>
-        {/if}
         {if $form.component_id.html} {* Component ID is exposed for activity types if CiviCase is enabled. *}
               <tr class="crm-admin-options-form-block-component_id">
                 <td class="label">{$form.component_id.label}</td>
