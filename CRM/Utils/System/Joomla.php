@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2016                                |
+ | Copyright CiviCRM LLC (c) 2004-2017                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2016
+ * @copyright CiviCRM LLC (c) 2004-2017
  */
 
 /**
@@ -710,11 +710,8 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
       '',
       $config->userFrameworkBaseURL
     );
-    $siteRoot = preg_replace(
-      '|/media/civicrm/.*$|',
-      '',
-      $config->imageUploadDir
-    );
+    // CRM-19453 - This makes it OS independent.
+    $siteRoot = JPATH_SITE;
     return array($url, NULL, $siteRoot);
   }
 
