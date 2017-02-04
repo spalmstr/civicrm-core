@@ -136,6 +136,8 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
     $query = $db->getQuery(TRUE);
     $query->select('username, email');
     $query->from($JUserTable->getTableName());
+
+    // LOWER in query below roughly translates to 'hurt my database without deriving any benefit' See CRM-19811.
     $query->where('(LOWER(username) = LOWER(\'' . $name . '\')) OR (LOWER(email) = LOWER(\'' . $email . '\'))');
     $db->setQuery($query, 0, 10);
     $users = $db->loadAssocList();
@@ -710,17 +712,8 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
       '',
       $config->userFrameworkBaseURL
     );
-    // CRM-19453 - Enable this to work in Windows, to by recognising
-    // the directory separator.
-    if (DIRECTORY_SEPARATOR === "\\") {
-      $pattern = '|\\\\media\\\\civicrm\\\\.*$|';
-    }
-    else {
-      $pattern = '|/media/civicrm/.*$|';
-    }
-
     $siteRoot = preg_replace(
-      $pattern,
+      '|/media/civicrm/.*$|',
       '',
       $config->imageUploadDir
     );
