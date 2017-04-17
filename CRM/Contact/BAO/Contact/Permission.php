@@ -170,7 +170,7 @@ WHERE contact_id IN ({$contact_id_list})
     $tables = array();
     $whereTables = array();
 
-    $permission = CRM_ACL_API::whereClause($type, $tables, $whereTables);
+    $permission = CRM_ACL_API::whereClause($type, $tables, $whereTables, NULL, FALSE, FALSE, TRUE);
     $from = CRM_Contact_BAO_Query::fromClause($whereTables);
 
     $query = "
@@ -221,7 +221,7 @@ WHERE contact_a.id = %1 AND $permission
 
       // run a query to see if the cache is filled
       $sql = "
-SELECT count(id)
+SELECT count(*)
 FROM   civicrm_acl_contact_cache
 WHERE  user_id = %1
 AND    $operationClause

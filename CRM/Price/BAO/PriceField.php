@@ -89,6 +89,9 @@ class CRM_Price_BAO_PriceField extends CRM_Price_DAO_PriceField {
       return $priceField;
     }
 
+    if (!empty($params['id']) && empty($priceField->html_type)) {
+      $priceField->html_type = CRM_Core_DAO::getFieldValue('CRM_Price_DAO_PriceField', $params['id'], 'html_type');
+    }
     $optionsIds = array();
     $maxIndex = CRM_Price_Form_Field::NUM_OPTION;
 
@@ -101,6 +104,12 @@ class CRM_Price_BAO_PriceField extends CRM_Price_DAO_PriceField {
       // update previous field values( if any )
       if ($fieldValue->find(TRUE)) {
         $optionsIds['id'] = $fieldValue->id;
+
+        //Update price_field_value label when edited inline.
+        if (!empty($params['id']) && $priceField->label != $fieldValue->label) {
+          $fieldValue->label = $priceField->label;
+          $fieldValue->save();
+        }
       }
     }
     $defaultArray = array();
@@ -143,6 +152,7 @@ class CRM_Price_BAO_PriceField extends CRM_Price_DAO_PriceField {
 
         if ($options['membership_type_id']) {
           $options['membership_num_terms'] = CRM_Utils_Array::value($index, CRM_Utils_Array::value('membership_num_terms', $params), 1);
+          $options['is_default'] = CRM_Utils_Array::value($params['membership_type_id'][$index], $defaultArray) ? $defaultArray[$params['membership_type_id'][$index]] : 0;
         }
 
         if (CRM_Utils_Array::value($index, CRM_Utils_Array::value('option_financial_type_id', $params))) {
