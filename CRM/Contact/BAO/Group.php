@@ -900,7 +900,7 @@ class CRM_Contact_BAO_Group extends CRM_Contact_DAO_Group {
     $visibility = CRM_Core_SelectValues::ufVisibility();
 
     while ($object->fetch()) {
-      $permission = CRM_Contact_BAO_Group::checkPermission($object->id, $object->title);
+      $permission = CRM_Contact_BAO_Group::checkPermission($object->id, TRUE);
       //@todo CRM-12209 introduced an ACL check in the whereClause function
       // it may be that this checking is now obsolete - or that what remains
       // should be removed to the whereClause (which is also accessed by getCount)
@@ -1019,7 +1019,7 @@ class CRM_Contact_BAO_Group extends CRM_Contact_DAO_Group {
       }
       // Exclude deleted contacts
       $where .= " and c.id = g.contact_id AND c.is_deleted = 0";
-      $dao = CRM_Core_DAO::executeQuery("SELECT g.group_id, COUNT(g.id) as `count` FROM $table g, civicrm_contact c WHERE $where GROUP BY g.group_id");
+      $dao = CRM_Core_DAO::executeQuery("SELECT g.group_id, COUNT(*) as `count` FROM $table g, civicrm_contact c WHERE $where GROUP BY g.group_id");
       while ($dao->fetch()) {
         $values[$dao->group_id]['count'] = $dao->count;
       }

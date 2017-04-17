@@ -59,6 +59,9 @@ class CRM_Upgrade_Incremental_php_FourSeven extends CRM_Upgrade_Incremental_Base
         $preUpgradeMessage .= '<p>' . ts('The %1 payment processor is no longer bundled with CiviCRM. After upgrading you will need to install the extension to continue using it.', array(1 => 'Moneris')) . '</p>';
       }
     }
+    if ($rev == '4.7.13') {
+      $preUpgradeMessage .= '<p>' . ts('A new permission has been added called %1 This Permission is now used to control access to the Manage Tags screen', array(1 => 'manage tags')) . '</p>';
+    }
   }
 
   /**
@@ -119,6 +122,7 @@ class CRM_Upgrade_Incremental_php_FourSeven extends CRM_Upgrade_Incremental_Base
    * @param string $rev
    */
   public function upgrade_4_7_alpha1($rev) {
+    $this->addTask('Drop action scheudle mapping foreign key', 'dropActionScheudleMappingForeignKey');
     $this->addTask('Migrate \'on behalf of\' information to module_data', 'migrateOnBehalfOfInfo');
     $this->addTask(ts('Upgrade DB to %1: SQL', array(1 => $rev)), 'runSql', $rev);
     $this->addTask(ts('Migrate Settings to %1', array(1 => $rev)), 'migrateSettings', $rev);
@@ -300,6 +304,16 @@ class CRM_Upgrade_Incremental_php_FourSeven extends CRM_Upgrade_Incremental_Base
     $this->addTask('Add new CiviMail fields', 'addMailingTemplateType');
     $this->addTask('CRM-19770 - Add is_star column to civicrm_activity', 'addColumn',
       'civicrm_activity', 'is_star', "tinyint DEFAULT '0' COMMENT 'Activity marked as favorite.'");
+    $this->addTask(ts('Upgrade DB to %1: SQL', array(1 => $rev)), 'runSql', $rev);
+  }
+
+  /**
+   * Upgrade function.
+   *
+   * @param string $rev
+   */
+  public function upgrade_4_7_18($rev) {
+    $this->addTask('Update Kenyan Provinces', 'updateKenyanProvinces');
     $this->addTask(ts('Upgrade DB to %1: SQL', array(1 => $rev)), 'runSql', $rev);
   }
 
@@ -781,6 +795,18 @@ FROM `civicrm_dashboard_contact` JOIN `civicrm_contact` WHERE civicrm_dashboard_
   }
 
   /**
+   * CRM-18464 Check if Foreign key exists and also drop any index of same name accidentially created.
+   *
+   * @param \CRM_Queue_TaskContext $ctx
+   *
+   * @return bool
+   */
+  public static function dropActionScheudleMappingForeignKey(CRM_Queue_TaskContext $ctx) {
+    CRM_Core_BAO_SchemaHandler::safeRemoveFK('civicrm_action_schedule', 'FK_civicrm_action_schedule_mapping_id');
+    return TRUE;
+  }
+
+  /**
    * CRM-18345 Don't delete mailing data on email/phone deletion
    * Implemented here in CRM-18526
    *
@@ -965,6 +991,58 @@ FROM `civicrm_dashboard_contact` JOIN `civicrm_contact` WHERE civicrm_dashboard_
       file_put_contents($newFileName, $config);
     }
     return TRUE;
+  }
+
+  /**
+   * Update Kenyan Provinces to reflect changes per CRM-20062
+   *
+   * @param \CRM_Queue_TaskContext $ctx
+   */
+  public function updateKenyanProvinces(CRM_Queue_TaskContext $ctx) {
+    $kenyaCountryID = CRM_Core_DAO::singleValueQuery('SELECT max(id) from civicrm_country where iso_code = "KE"');
+    $oldProvinces = array(
+      'Nairobi Municipality',
+      'Coast',
+      'North-Eastern Kaskazini Mashariki',
+      'Rift Valley',
+      'Western Magharibi',
+    );
+    self::deprecateStateProvinces($kenyaCountryID, $oldProvinces);
+    return TRUE;
+  }
+
+  /**
+   * Deprecate provinces that no longer exist.
+   *
+   * @param int $countryID
+   * @param array $provinces
+   */
+  public static function deprecateStateProvinces($countryID, $provinces) {
+    foreach ($provinces as $province) {
+      $existingStateID = CRM_Core_DAO::singleValueQuery("
+        SELECT id FROM civicrm_state_province
+        WHERE country_id = %1
+        AND name = %2
+      ",
+      array(1 => array($countryID, 'Int'), 2 => array($province, 'String')));
+
+      if (!$existingStateID) {
+        continue;
+      }
+      if (!CRM_Core_DAO::singleValueQuery("
+       SELECT count(*) FROM civicrm_address
+       WHERE state_province_id = %1
+       ", array(1 => array($existingStateID, 'Int')))
+      ) {
+        CRM_Core_DAO::executeQuery("DELETE FROM civicrm_state_province WHERE id = %1", array(1 => array($existingStateID, 'Int')));
+      }
+      else {
+        $params = array('1' => array(ts("Former - $province"), 'String'));
+        CRM_Core_DAO::executeQuery("
+          UPDATE civicrm_state_province SET name = %1 WHERE id = $existingStateID
+        ", $params);
+      }
+    }
   }
 
 }
