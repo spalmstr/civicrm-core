@@ -1,7 +1,7 @@
 <?php
 /*
  +--------------------------------------------------------------------+
- | CiviCRM version 4.7                                                |
+ | CiviCRM version 4.7.27                                          |
  +--------------------------------------------------------------------+
  | Copyright CiviCRM LLC (c) 2004-2017                                |
  +--------------------------------------------------------------------+
@@ -325,6 +325,7 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
 
   /**
    * @inheritDoc
+   * PNH: Joomla 3.8.0 has changed things so a variation is required below.
    */
   public function authenticate($name, $password, $loadCMSBootstrap = FALSE, $realPath = NULL) {
     require_once 'DB.php';
@@ -390,10 +391,14 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
         }
 
         //include additional files required by Joomla 3.2.1+
+        //PNH: but use "jimport" for Joomla 3.8.0
         if (version_compare(JVERSION, '3.2.1', 'ge')) {
-          require_once $joomlaBase . '/libraries/cms/application/helper.php';
-          require_once $joomlaBase . '/libraries/cms/application/cms.php';
-          require_once $joomlaBase . '/libraries/cms/application/administrator.php';
+          //require_once $joomlaBase . '/libraries/cms/application/helper.php';
+          //require_once $joomlaBase . '/libraries/cms/application/cms.php';
+          //require_once $joomlaBase . '/libraries/cms/application/administrator.php';
+          jimport('joomla.application.helper');
+	  jimport('joomla.application.cms');
+	  jimport('joomla.application.administrator');
         }
       }
 
@@ -537,7 +542,9 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
     if (file_exists($joomlaBase . '/libraries/import.legacy.php')) {
       require $joomlaBase . '/libraries/import.legacy.php';
     }
-    require $joomlaBase . '/libraries/import.php';
+    //PNH: Need to load CMS before IMPORT
+    require $joomlaBase . '/libraries/cms.php';
+    //require $joomlaBase . '/libraries/import.php';
     require $joomlaBase . '/libraries/joomla/event/dispatcher.php';
     require $joomlaBase . '/configuration.php';
 
@@ -549,12 +556,15 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
     }
 
     if (version_compare(JVERSION, '3.0', 'lt')) {
-      require $joomlaBase . '/libraries/joomla/environment/uri.php';
+      //require $joomlaBase . '/libraries/joomla/environment/uri.php';
+      //PNH: Use "jimport" instead of the previous line.
+      jimport('joomla.environment.uri');
       require $joomlaBase . '/libraries/joomla/application/component/helper.php';
     }
     else {
       require $joomlaBase . '/libraries/cms.php';
-      require $joomlaBase . '/libraries/joomla/uri/uri.php';
+      //require $joomlaBase . '/libraries/joomla/uri/uri.php';
+      jimport('joomla.environment.uri');
     }
 
     jimport('joomla.application.cli');
@@ -696,6 +706,9 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
    *
    * @return string|NULL
    *   local file system path to CMS root, or NULL if it cannot be determined
+   * PNH: In version 3.8.0 of Joomla, the file [version.php] has been moved.
+   * It can now be found in [/libraries/src/Version.php].
+   * The relevant line has been amended below (commenting out the previous version).
    */
   public function cmsRootPath() {
     global $civicrm_paths;
@@ -704,8 +717,9 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
     }
 
     list($url, $siteName, $siteRoot) = $this->getDefaultSiteSettings();
-    $includePath = "$siteRoot/libraries/cms/version";
-    if (file_exists("$includePath/version.php")) {
+    //$includePath = "$siteRoot/libraries/cms/version";
+    $includePath = "$siteRoot/libraries/src";
+    if (file_exists("$includePath/Version.php")) {
       return $siteRoot;
     }
     return NULL;
