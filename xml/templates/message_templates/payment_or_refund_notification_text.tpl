@@ -1,7 +1,5 @@
 Dear {$contactDisplayName}
-{if $paymentConfig.confirm_email_text}
-{$paymentConfig.confirm_email_text}
-{elseif $isRefund}
+{if $isRefund}
 {ts}A refund has been issued based on changes in your registration selections.{/ts}
 {else}
 {ts}A payment has been received.{/ts}
@@ -33,7 +31,7 @@ Dear {$contactDisplayName}
 
 {if $paymentsComplete}
 
-{ts}Thank-you. This completes your payment for {/ts}{if $component eq 'event'}{$event.event_title}{/if}.
+{ts}Thank you for completing payment.{/ts}
 {/if}
 {/if}
 {if $receive_date}
@@ -80,7 +78,7 @@ Dear {$contactDisplayName}
 {$event.event_title}
 {$event.event_start_date|crmDate}{if $event.event_end_date}-{if $event.event_end_date|date_format:"%Y%m%d" == $event.event_start_date|date_format:"%Y%m%d"}{$event.event_end_date|crmDate:0:1}{else}{$event.event_end_date|crmDate}{/if}{/if}
 
-{if $event.participant_role neq 'Attendee' and $defaultRole}
+{if $event.participant_role}
 {ts}Participant Role{/ts}: {$event.participant_role}
 {/if}
 

@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 
 /**
@@ -106,7 +106,12 @@ class CRM_Group_Form_Edit extends CRM_Core_Form {
     if ($this->_action == CRM_Core_Action::DELETE) {
       if (isset($this->_id)) {
         $this->assign('title', $this->_title);
-        $this->assign('count', CRM_Contact_BAO_Group::memberCount($this->_id));
+        try {
+          $this->assign('count', CRM_Contact_BAO_Group::memberCount($this->_id));
+        }
+        catch (CRM_Core_Exception $e) {
+          // If the group is borked the query might fail but delete should be possible.
+        }
         CRM_Utils_System::setTitle(ts('Confirm Group Delete'));
       }
       if ($this->_groupValues['is_reserved'] == 1 && !CRM_Core_Permission::check('administer reserved groups')) {

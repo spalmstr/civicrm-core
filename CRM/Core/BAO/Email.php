@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 
 /**
@@ -237,10 +237,20 @@ ORDER BY e.is_primary DESC, email_id ASC ";
    *   Email object.
    */
   public static function holdEmail(&$email) {
+    if ($email->id && $email->on_hold === NULL) {
+      // email is being updated but no change to on_hold.
+      return;
+    }
+    if ($email->on_hold === 'null' || $email->on_hold === NULL) {
+      // legacy handling, deprecated.
+      $email->on_hold = 0;
+    }
+    $email->on_hold = (int) $email->on_hold;
+
     //check for update mode
     if ($email->id) {
       $params = array(1 => array($email->id, 'Integer'));
-      if ($email->on_hold && $email->on_hold != 'null') {
+      if ($email->on_hold) {
         $sql = "
 SELECT id
 FROM   civicrm_email
@@ -252,7 +262,8 @@ AND    hold_date IS NULL
           $email->reset_date = 'null';
         }
       }
-      elseif ($email->on_hold == 'null') {
+      elseif ($email->on_hold === 0) {
+        // we do this lookup to see if reset_date should be changed.
         $sql = "
 SELECT id
 FROM   civicrm_email
@@ -269,7 +280,7 @@ AND    reset_date IS NULL
       }
     }
     else {
-      if (($email->on_hold != 'null') && $email->on_hold) {
+      if ($email->on_hold) {
         $email->hold_date = date('YmdHis');
       }
     }
@@ -304,6 +315,7 @@ AND    reset_date IS NULL
       return $fromEmailValues;
     }
 
+    $contactFromEmails = [];
     // add logged in user's active email ids
     $contactID = CRM_Core_Session::singleton()->getLoggedInContactID();
     if ($contactID) {
@@ -321,10 +333,10 @@ AND    reset_date IS NULL
         if (!empty($emailVal['is_primary'])) {
           $fromEmailHtml .= ' ' . ts('(preferred)');
         }
-        $fromEmailValues[$emailId] = $fromEmailHtml;
+        $contactFromEmails[$fromEmail] = $fromEmailHtml;
       }
     }
-    return $fromEmailValues;
+    return CRM_Utils_Array::crmArrayMerge($contactFromEmails, $fromEmailValues);
   }
 
   /**

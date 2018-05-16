@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -419,6 +419,13 @@ if (!defined('CIVICRM_DB_CACHE_PREFIX')) {
 // if (!defined('CIVICRM_GETTEXT_NATIVE')) {
 // define('CIVICRM_GETTEXT_NATIVE', 1);
 // }
+
+/**
+ * Define how many times to retry a transaction when the DB hits a deadlock
+ * (ie. the database is locked by another transaction). This is an
+ * advanced setting intended for high-traffic databases & experienced developers/ admins.
+ */
+define('CIVICRM_DEADLOCK_RETRIES', 3);
 
 /**
  * Configure MySQL to throw more errors when encountering unusual SQL expressions.

@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 
 require_once 'HTML/QuickForm/Rule/Email.php';
@@ -814,6 +814,25 @@ class CRM_Utils_Rule {
   }
 
   /**
+   * Validate json string for xss
+   *
+   * @param string $value
+   *
+   * @return bool
+   *   False if invalid, true if valid / safe.
+   */
+  public static function json($value) {
+    if (!self::xssString($value)) {
+      return FALSE;
+    }
+    $array = json_decode($value, TRUE);
+    if (!$array || !is_array($array)) {
+      return FALSE;
+    }
+    return self::arrayValue($array);
+  }
+
+  /**
    * @param $path
    *
    * @return bool
@@ -935,9 +954,29 @@ class CRM_Utils_Rule {
    * @param string $key Extension Key to check
    * @return bool
    */
-  public static function checkExtesnionKeyIsValid($key = NULL) {
+  public static function checkExtensionKeyIsValid($key = NULL) {
     if (!empty($key) && !preg_match('/^[0-9a-zA-Z._-]+$/', $key)) {
       return FALSE;
+    }
+    return TRUE;
+  }
+
+  /**
+   * Validate array recursively checking keys and  values.
+   *
+   * @param array $array
+   * @return bool
+   */
+  protected static function arrayValue($array) {
+    foreach ($array as $key => $item) {
+      if (is_array($item)) {
+        if (!self::xssString($key) || !self::arrayValue($item)) {
+          return FALSE;
+        }
+      }
+      if (!self::xssString($key) || !self::xssString($item)) {
+        return FALSE;
+      }
     }
     return TRUE;
   }

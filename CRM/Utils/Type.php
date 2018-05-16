@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 class CRM_Utils_Type {
   const
@@ -422,6 +422,7 @@ class CRM_Utils_Type {
       'MysqlOrderByDirection',
       'MysqlOrderBy',
       'ExtensionKey',
+      'Json',
     );
     if (!in_array($type, $possibleTypes)) {
       if ($isThrowException) {
@@ -526,7 +527,13 @@ class CRM_Utils_Type {
         break;
 
       case 'ExtensionKey':
-        if (CRM_Utils_Rule::checkExtesnionKeyIsValid($data)) {
+        if (CRM_Utils_Rule::checkExtensionKeyIsValid($data)) {
+          return $data;
+        }
+        break;
+
+      case 'Json':
+        if (CRM_Utils_Rule::json($data)) {
           return $data;
         }
         break;

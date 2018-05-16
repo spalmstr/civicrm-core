@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 
 /**
@@ -56,7 +56,8 @@ class CRM_Contact_BAO_Query {
     // There is no 4,
     MODE_MEMBER = 8,
     MODE_EVENT = 16,
-    // No 32, no 64.
+    MODE_CONTACTSRELATED = 32,
+    // no 64.
     MODE_GRANT = 128,
     MODE_PLEDGEBANK = 256,
     MODE_PLEDGE = 512,
@@ -66,6 +67,13 @@ class CRM_Contact_BAO_Query {
     MODE_CAMPAIGN = 8192,
     MODE_MAILING = 16384,
     MODE_ALL = 17407;
+
+  /**
+   * Constants for search operators
+   */
+  const
+    SEARCH_OPERATOR_AND = 'AND',
+    SEARCH_OPERATOR_OR = 'OR';
 
   /**
    * The default set of return properties.
@@ -1444,11 +1452,7 @@ class CRM_Contact_BAO_Query {
         }
       }
 
-      $select = "SELECT ";
-      if (isset($this->_distinctComponentClause)) {
-        $select .= "{$this->_distinctComponentClause}, ";
-      }
-      $select .= implode(', ', $this->_select);
+      $select = $this->getSelect();
       $from = $this->_fromClause;
     }
 
@@ -4703,18 +4707,21 @@ civicrm_relationship.is_permission_a_b = 0
    *
    * @param array $selectClauses
    * @param array $groupBy - Columns already included in GROUP By clause.
+   * @param string $aggregateFunction
    *
    * @return string
    */
-  public static function appendAnyValueToSelect($selectClauses, $groupBy) {
+  public static function appendAnyValueToSelect($selectClauses, $groupBy, $aggregateFunction = 'ANY_VALUE') {
     if (!CRM_Utils_SQL::disableFullGroupByMode()) {
       $groupBy = array_map('trim', (array) $groupBy);
-      $aggregateFunctions = '/(ROUND|AVG|COUNT|GROUP_CONCAT|SUM|MAX|MIN)\(/i';
+      $aggregateFunctions = '/(ROUND|AVG|COUNT|GROUP_CONCAT|SUM|MAX|MIN|IF)[[:blank:]]*\(/i';
       foreach ($selectClauses as $key => &$val) {
         list($selectColumn, $alias) = array_pad(preg_split('/ as /i', $val), 2, NULL);
         // append ANY_VALUE() keyword
         if (!in_array($selectColumn, $groupBy) && preg_match($aggregateFunctions, trim($selectColumn)) !== 1) {
-          $val = str_replace($selectColumn, "ANY_VALUE({$selectColumn})", $val);
+          $val = ($aggregateFunction == 'GROUP_CONCAT') ?
+            str_replace($selectColumn, "$aggregateFunction(DISTINCT {$selectColumn})", $val) :
+            str_replace($selectColumn, "$aggregateFunction({$selectColumn})", $val);
         }
       }
     }
@@ -4732,9 +4739,9 @@ civicrm_relationship.is_permission_a_b = 0
    *
    */
   public static function getGroupByFromOrderBy(&$groupBy, $orderBys) {
-    if (CRM_Utils_SQL::disableFullGroupByMode()) {
+    if (!CRM_Utils_SQL::disableFullGroupByMode()) {
       foreach ($orderBys as $orderBy) {
-        $orderBy = str_replace(array(' DESC', ' ASC'), '', $orderBy); // remove sort syntax from ORDER BY clauses if present
+        $orderBy = str_replace(array(' DESC', ' ASC', '`'), '', $orderBy); // remove sort syntax from ORDER BY clauses if present
         // if ORDER BY column is not present in GROUP BY then append it to end
         if (preg_match('/(MAX|MIN)\(/i', trim($orderBy)) !== 1 && !strstr($groupBy, $orderBy)) {
           $groupBy .= ", {$orderBy}";
@@ -4758,7 +4765,7 @@ civicrm_relationship.is_permission_a_b = 0
 
     //return if ONLY_FULL_GROUP_BY is not enabled.
     if (CRM_Utils_SQL::supportsFullGroupBy() && !empty($sqlMode) && in_array('ONLY_FULL_GROUP_BY', explode(',', $sqlMode))) {
-      $regexToExclude = '/(ROUND|AVG|COUNT|GROUP_CONCAT|SUM|MAX|MIN)\(/i';
+      $regexToExclude = '/(ROUND|AVG|COUNT|GROUP_CONCAT|SUM|MAX|MIN|IF)[[:blank:]]*\(/i';
       foreach ($selectClauses as $key => $val) {
         $aliasArray = preg_split('/ as /i', $val);
         // if more than 1 alias we need to split by ','.
@@ -4834,6 +4841,13 @@ civicrm_relationship.is_permission_a_b = 0
     $additionalFromClause = NULL, $skipOrderAndLimit = FALSE
   ) {
 
+    // In this case we are expecting the search query to return all the first single letter characters of contacts ONLY,
+    //  but when FGB (FULL_GROUP_BY_MODE) is enabled MySQL expect the columns present in GROUP BY must be present in SELECT clause
+    //  and that results into error and needless to have other columns. In order to resolve this disable FGB to fulfill both the cases
+    if ($sortByChar) {
+      CRM_Core_DAO::disableFullGroupByMode();
+    }
+
     if ($includeContactIds) {
       $this->_includeContactIds = TRUE;
       $this->_whereClause = $this->whereClause();
@@ -4856,21 +4870,19 @@ civicrm_relationship.is_permission_a_b = 0
     }
 
     // building the query string
-    $groupBy = $groupByCol = NULL;
+    $groupBy = $groupByCols = NULL;
     if (!$count) {
       if (isset($this->_groupByComponentClause)) {
         $groupBy = $this->_groupByComponentClause;
-        $groupCols = preg_replace('/^GROUP BY /', '', trim($this->_groupByComponentClause));
-        $groupByCol = explode(', ', $groupCols);
+        $groupByCols = preg_replace('/^GROUP BY /', '', trim($this->_groupByComponentClause));
+        $groupByCols = explode(', ', $groupByCols);
       }
       elseif ($this->_useGroupBy) {
-        $groupByCol = 'contact_a.id';
-        $groupBy = ' GROUP BY contact_a.id';
+        $groupByCols = array('contact_a.id');
       }
     }
     if ($this->_mode & CRM_Contact_BAO_Query::MODE_ACTIVITY && (!$count)) {
-      $groupByCol = 'civicrm_activity.id';
-      $groupBy = 'GROUP BY civicrm_activity.id ';
+      $groupByCols = array('civicrm_activity.id');
     }
 
     $order = $orderBy = $limit = '';
@@ -4892,8 +4904,17 @@ civicrm_relationship.is_permission_a_b = 0
 
     list($select, $from, $where, $having) = $this->query($count, $sortByChar, $groupContacts, $onlyDeleted);
 
-    if (!empty($groupByCol)) {
-      $groupBy = self::getGroupByFromSelectColumns($this->_select, $groupByCol);
+    if (!empty($groupByCols)) {
+      // It doesn't matter to include columns in SELECT clause, which are present in GROUP BY when we just want the contact IDs
+      if (!$groupContacts && !$sortByChar) {
+        $select = self::appendAnyValueToSelect($this->_select, $groupByCols, 'GROUP_CONCAT');
+      }
+      $groupBy = " GROUP BY " . implode(', ', $groupByCols);
+      if (!empty($order)) {
+        // retrieve order by columns from ORDER BY clause
+        $orderBys = explode(",", str_replace('ORDER BY ', '', $order));
+        self::getGroupByFromOrderBy($groupBy, $orderBys);
+      }
     }
 
     if ($additionalWhereClause) {
@@ -4926,6 +4947,11 @@ civicrm_relationship.is_permission_a_b = 0
     }
 
     $dao = CRM_Core_DAO::executeQuery($query);
+
+    if ($sortByChar) {
+      CRM_Core_DAO::reenableFullGroupByMode();
+    }
+
     if ($groupContacts) {
       $ids = array();
       while ($dao->fetch()) {
@@ -4954,7 +4980,8 @@ civicrm_relationship.is_permission_a_b = 0
     $from = " FROM civicrm_prevnext_cache pnc INNER JOIN civicrm_contact contact_a ON contact_a.id = pnc.entity_id1 AND pnc.cacheKey = '$cacheKey' " . substr($from, 31);
     $order = " ORDER BY pnc.id";
     $groupByCol = array('contact_a.id', 'pnc.id');
-    $groupBy = self::getGroupByFromSelectColumns($this->_select, $groupByCol);
+    $select = self::appendAnyValueToSelect($this->_select, $groupByCol, 'GROUP_CONCAT');
+    $groupBy = " GROUP BY " . implode(', ', $groupByCol);
     $limit = " LIMIT $offset, $rowCount";
     $query = "$select $from $where $groupBy $order $limit";
 
@@ -6375,7 +6402,7 @@ AND   displayRelType.is_active = 1
         $orderByArray = array("UPPER(LEFT(contact_a.sort_name, 1)) asc");
       }
       else {
-        $order = " ORDER BY contact_a.sort_name asc, contact_a.id";
+        $order = " ORDER BY contact_a.sort_name ASC, contact_a.id";
       }
     }
     if (!$order && empty($orderByArray)) {
@@ -6532,6 +6559,20 @@ AND   displayRelType.is_active = 1
       return TRUE;
     }
     return FALSE;
+  }
+
+  /**
+   * Get Select Clause.
+   *
+   * @return string
+   */
+  public function getSelect() {
+    $select = "SELECT ";
+    if (isset($this->_distinctComponentClause)) {
+      $select .= "{$this->_distinctComponentClause}, ";
+    }
+    $select .= implode(', ', $this->_select);
+    return $select;
   }
 
 }

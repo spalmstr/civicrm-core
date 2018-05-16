@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -51,6 +51,19 @@
     <tr><td class="label">{$form.financial_type_id.label}</td><td>{$form.financial_type_id.html}</td></tr>
     {/if}
   </table>
+
+  <div id="customData"></div>
+  {*include custom data js file*}
+  {include file="CRM/common/customData.tpl"}
+  {literal}
+    <script type="text/javascript">
+      CRM.$(function($) {
+        {/literal}
+        CRM.buildCustomData( '{$customDataType}' );
+        {literal}
+      });
+    </script>
+  {/literal}
 
   <div class="crm-submit-buttons">{include file="CRM/common/formButtons.tpl" location="bottom"}</div>
 </div>

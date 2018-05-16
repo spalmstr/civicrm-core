@@ -2,7 +2,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -31,13 +31,6 @@
   {include file="CRM/Contribute/Form/AdditionalInfo/$formType.tpl"}
 {else}
   {include file="CRM/Contribute/Form/AdditionalInfo/Payment.tpl"}
-  <div class="crm-block crm-form-block crm-contribution-form-block">
-
-  {if !$email and $action neq 8 and $context neq 'standalone'}
-  <div class="messages status no-popup">
-    <div class="icon inform-icon"></div>&nbsp;{ts}You will not be able to send an automatic email receipt for this contribution because there is no email address recorded for this contact. If you want a receipt to be sent when this contribution is recorded, click Cancel and then click Edit from the Summary tab to add an email address before recording the contribution.{/ts}
-  </div>
-  {/if}
   {if $contributionMode}
   <div class="help">
     {if $contactId && $payNow}
@@ -51,6 +44,15 @@
     {/if}
   </div>
   {/if}
+  
+  <div class="crm-block crm-form-block crm-contribution-form-block">
+
+  {if !$email and $action neq 8 and $context neq 'standalone'}
+  <div class="messages status no-popup">
+    <div class="icon inform-icon"></div>&nbsp;{ts}You will not be able to send an automatic email receipt for this contribution because there is no email address recorded for this contact. If you want a receipt to be sent when this contribution is recorded, click Cancel and then click Edit from the Summary tab to add an email address before recording the contribution.{/ts}
+  </div>
+  {/if}
+  
   {if $action eq 8}
   <div class="messages status no-popup">
     <div class="icon inform-icon"></div>
@@ -97,6 +99,9 @@
       <td class="label">{$form.total_amount.label}</td>
       <td {$valueStyle}>
         <span id='totalAmount'>{$form.currency.html|crmAddClass:eight}&nbsp;{$form.total_amount.html|crmAddClass:eight}</span>
+        {if $freezeFinancialType}
+          {help id="id-total_amount"}
+        {/if}
         {if !$payNow}
           {if $hasPriceSets}
             <span id='totalAmountORPriceSet'> {ts}OR{/ts}</span>
@@ -161,7 +166,7 @@
         {if $contribution_status_id eq 2}{if $is_pay_later }: {ts}Pay Later{/ts} {else}: {ts}Incomplete Transaction{/ts}{/if}{/if}
         </td>
         <td>
-        {if $contactId && $contribID && $contributionMode EQ null && $contribution_status_id eq 2}
+        {if !$isUsePaymentBlock && $contactId && $contribID && $contributionMode EQ null && $contribution_status_id eq 2}
           {capture assign=payNowLink}{crmURL p='civicrm/contact/view/contribution' q="reset=1&action=update&id=`$contribID`&cid=`$contactId`&context=`$context`&mode=live"}{/capture}
           <a class="open-inline action-item crm-hover-button" href="{$payNowLink}">&raquo; {ts}Pay with Credit Card{/ts}</a>
         {/if}
@@ -249,6 +254,9 @@
       <legend>
         {ts}Payment Details{/ts}
       </legend>
+      {if $isUsePaymentBlock}
+        {include file="CRM/Contribute/Form/PaymentInfoBlock.tpl"}
+      {else}
         <table class="form-layout-compressed" >
           <tr class="crm-contribution-form-block-payment_instrument_id">
             <td class="label">{$form.payment_instrument_id.label}</td>
@@ -260,10 +268,13 @@
             <td {$valueStyle}>{$form.trxn_id.html} {help id="id-trans_id"}</td>
           </tr>
         </table>
+      {/if}
       </fieldset>
   {/if}
 
-  {include file='CRM/Core/BillingBlockWrapper.tpl'}
+  {if !$isUsePaymentBlock}
+    {include file='CRM/Core/BillingBlockWrapper.tpl'}
+  {/if}
 
     <!-- start of soft credit -->
     {if !$payNow}

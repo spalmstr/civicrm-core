@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 
 /**
@@ -1259,6 +1259,10 @@ ORDER BY civicrm_custom_group.weight,
    */
   private static function _addWhereAdd(&$customGroupDAO, $entityType, $entityID = NULL, $allSubtypes = FALSE) {
     $addSubtypeClause = FALSE;
+    // This function isn't really accessible with user data but since the string
+    // is not passed as a param to the query CRM_Core_DAO::escapeString seems like a harmless
+    // precaution.
+    $entityType = CRM_Core_DAO::escapeString($entityType);
 
     switch ($entityType) {
       case 'Contact':
@@ -1281,13 +1285,7 @@ ORDER BY civicrm_custom_group.weight,
         }
         break;
 
-      case 'Case':
-      case 'Location':
-      case 'Address':
-      case 'Activity':
-      case 'Contribution':
-      case 'Membership':
-      case 'Participant':
+      default:
         $customGroupDAO->whereAdd("extends IN ('$entityType')");
         break;
     }
@@ -1961,7 +1959,7 @@ SELECT IF( EXISTS(SELECT name FROM civicrm_contact_type WHERE name like %1), 1, 
   /**
    * Build custom data view.
    *
-   * @param CRM_Core_Form $form
+   * @param CRM_Core_Form|CRM_Core_Page $form
    *   Page object.
    * @param array $groupTree
    * @param bool $returnCount
@@ -1972,6 +1970,7 @@ SELECT IF( EXISTS(SELECT name FROM civicrm_contact_type WHERE name like %1), 1, 
    * @param int $entityId
    *
    * @return array|int
+   * @throws \Exception
    */
   public static function buildCustomDataView(&$form, &$groupTree, $returnCount = FALSE, $gID = NULL, $prefix = NULL, $customValueId = NULL, $entityId = NULL) {
     $details = array();

@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -28,7 +28,7 @@
 /**
  *
  * @package CRM
- * @copyright CiviCRM LLC (c) 2004-2017
+ * @copyright CiviCRM LLC (c) 2004-2018
  */
 
 /**
@@ -447,7 +447,7 @@ class CRM_Financial_BAO_PaymentProcessor extends CRM_Financial_DAO_PaymentProces
     $capabilitiesString = implode('', $capabilities);
     if (!isset(\Civi::$statics[__CLASS__]['supported_capabilities'][$capabilitiesString])) {
       $result = self::getPaymentProcessors($capabilities);
-      \Civi::$statics[__CLASS__]['supported_capabilities'][$capabilitiesString] = (!empty($result)) ? TRUE : FALSE;
+      \Civi::$statics[__CLASS__]['supported_capabilities'][$capabilitiesString] = (!empty($result) && array_keys($result) !== array(0)) ? TRUE : FALSE;
     }
     return \Civi::$statics[__CLASS__]['supported_capabilities'][$capabilitiesString];
   }
@@ -567,6 +567,26 @@ INNER JOIN civicrm_contribution       con ON ( mp.contribution_id = con.id )
       'return' => 'payment_processor_id',
     ));
     return Civi\Payment\System::singleton()->getById($paymentProcessorId);
+  }
+
+  /**
+   * Get the name of the payment processor
+   *
+   * @param $paymentProcessorId
+   *
+   * @return null|string
+   */
+  public static function getPaymentProcessorName($paymentProcessorId) {
+    try {
+      $paymentProcessor = civicrm_api3('PaymentProcessor', 'getsingle', array(
+        'return' => array('name'),
+        'id' => $paymentProcessorId,
+      ));
+      return $paymentProcessor['name'];
+    }
+    catch (Exception $e) {
+      return ts('Unknown') . ' (' . $paymentProcessorId . ')';
+    }
   }
 
   /**

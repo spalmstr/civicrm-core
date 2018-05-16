@@ -3,7 +3,7 @@
  +--------------------------------------------------------------------+
  | CiviCRM version 4.7                                                |
  +--------------------------------------------------------------------+
- | Copyright CiviCRM LLC (c) 2004-2017                                |
+ | Copyright CiviCRM LLC (c) 2004-2018                                |
  +--------------------------------------------------------------------+
  | This file is a part of CiviCRM.                                    |
  |                                                                    |
@@ -326,11 +326,6 @@ class SettingsBag {
    *   The new value of the setting.
    */
   protected function setDb($name, $value) {
-    if (\CRM_Core_BAO_Setting::isUpgradeFromPreFourOneAlpha1()) {
-      // civicrm_setting table is not going to be present.
-      return;
-    }
-
     $fields = array();
     $fieldsToSet = \CRM_Core_BAO_Setting::validateSettingsInput(array($name => $value), $fields);
     //We haven't traditionally validated inputs to setItem, so this breaks things.
