@@ -372,7 +372,7 @@ SET    version = '$version'
     $this->source($smarty->fetch($tplFile), TRUE);
 
     if ($this->multilingual) {
-      CRM_Core_I18n_Schema::rebuildMultilingualSchema($this->locales, $rev, TRUE);
+      CRM_Core_I18n_Schema::rebuildMultilingualSchema($this->locales, $rev);
     }
     return $this->multilingual;
   }
