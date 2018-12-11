@@ -885,7 +885,7 @@ ORDER BY civicrm_address.is_primary DESC, civicrm_address.location_type_id DESC,
       $locale = $config->lcMessages;
     }
 
-    $parsingSupportedLocales = array('en_US', 'en_CA', 'fr_CA', 'en_GB');
+    $parsingSupportedLocales = array('en_US', 'en_CA', 'fr_CA');
 
     if (in_array($locale, $parsingSupportedLocales)) {
       return TRUE;
