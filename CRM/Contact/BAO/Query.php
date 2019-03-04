@@ -412,6 +412,8 @@ class CRM_Contact_BAO_Query {
 
   public $_pseudoConstantsSelect = array();
 
+  public $_groupUniqueKey = NULL;
+
   /**
    * Class constructor which also does all the work.
    *
@@ -1427,7 +1429,7 @@ class CRM_Contact_BAO_Query {
           $group->find(TRUE);
 
           if (!isset($group->saved_search_id)) {
-            $tbName = "`civicrm_group_contact-{$groupId}`";
+            $tbName = "civicrm_group_contact";
             // CRM-17254 don't retrieve extra fields if contact_id is specifically requested
             // as this will add load to an intentionally light query.
             // ideally this code would be removed as it appears to be to support CRM-1203
@@ -2130,7 +2132,7 @@ class CRM_Contact_BAO_Query {
 
     $setTables = TRUE;
 
-    $locationType = CRM_Core_PseudoConstant::get('CRM_Core_DAO_Address', 'location_type_id');
+    $locationType = CRM_Core_DAO_Address::buildOptions('location_type_id', 'validate');
     if (isset($locType[1]) && is_numeric($locType[1])) {
       $lType = $locationType[$locType[1]];
     }
@@ -2972,7 +2974,7 @@ class CRM_Contact_BAO_Query {
         $smartGroupIDs[] = $id;
       }
       else {
-        $regularGroupIDs[] = $id;
+        $regularGroupIDs[] = trim($id);
       }
     }
 
@@ -3011,8 +3013,11 @@ class CRM_Contact_BAO_Query {
       if (count($regularGroupIDs) > 1) {
         $op = strpos($op, 'IN') ? $op : ($op == '!=') ? 'NOT IN' : 'IN';
       }
-      $groupIds = implode(',', (array) $regularGroupIDs);
-      $gcTable = "`civicrm_group_contact-{$groupIds}`";
+      $groupIds = CRM_Utils_Type::validate(
+        implode(',', (array) $regularGroupIDs),
+        'CommaSeparatedIntegers'
+      );
+      $gcTable = "`civicrm_group_contact-" . uniqid() . "`";
       $joinClause = array("contact_a.id = {$gcTable}.contact_id");
 
       if (strpos($op, 'IN') !== FALSE) {
@@ -3033,18 +3038,42 @@ class CRM_Contact_BAO_Query {
     }
 
     //CRM-19589: contact(s) removed from a Smart Group, resides in civicrm_group_contact table
-    if (count($smartGroupIDs)) {
-      $groupClause[] = " ( " . $this->addGroupContactCache($smartGroupIDs, NULL, "contact_a", $op) . " ) ";
+    $groupContactCacheClause = '';
+    if (count($smartGroupIDs) || empty($value)) {
+      $this->_groupUniqueKey = uniqid();
+      $gccTableAlias = "civicrm_group_contact_cache_{$this->_groupUniqueKey}";
+      $groupContactCacheClause = $this->addGroupContactCache($smartGroupIDs, $gccTableAlias, "contact_a", $op);
+      if (!empty($groupContactCacheClause)) {
+        if ($isNotOp) {
+          $groupIds = implode(',', (array) $smartGroupIDs);
+          $gcTable = "civicrm_group_contact_{$this->_groupUniqueKey}";
+          $joinClause = array("contact_a.id = {$gcTable}.contact_id");
+          $this->_tables[$gcTable] = $this->_whereTables[$gcTable] = " LEFT JOIN civicrm_group_contact {$gcTable} ON (" . implode(' AND ', $joinClause) . ")";
+          if (strpos($op, 'IN') !== FALSE) {
+            $groupClause[] = "{$gcTable}.group_id $op ( $groupIds ) AND {$gccTableAlias}.group_id IS NULL";
+          }
+          else {
+            $groupClause[] = "{$gcTable}.group_id $op $groupIds AND {$gccTableAlias}.group_id IS NULL";
+          }
+        }
+        $groupClause[] = " ( {$groupContactCacheClause} ) ";
+      }
     }
 
     $and = ($op == 'IS NULL') ? ' AND ' : ' OR ';
-    $this->_where[$grouping][] = ' ( ' . implode($and, $groupClause) . ' ) ';
+    if (!empty($groupClause)) {
+      $this->_where[$grouping][] = ' ( ' . implode($and, $groupClause) . ' ) ';
+    }
 
     list($qillop, $qillVal) = CRM_Contact_BAO_Query::buildQillForFieldValue('CRM_Contact_DAO_Group', 'id', $value, $op);
     $this->_qill[$grouping][] = ts("Group(s) %1 %2", array(1 => $qillop, 2 => $qillVal));
     if (strpos($op, 'NULL') === FALSE) {
       $this->_qill[$grouping][] = ts("Group Status %1", array(1 => implode(' ' . ts('or') . ' ', $statii)));
     }
+  }
+
+  public function getGroupCacheTableKey() {
+    return $this->_groupUniqueKey;
   }
 
   /**
@@ -3074,9 +3103,14 @@ class CRM_Contact_BAO_Query {
    *
    * @return string WHERE clause component for smart group criteria.
    */
-  public function addGroupContactCache($groups, $tableAlias = NULL, $joinTable = "contact_a", $op, $joinColumn = 'id') {
+  public function addGroupContactCache($groups, $tableAlias, $joinTable = "contact_a", $op, $joinColumn = 'id') {
     $isNullOp = (strpos($op, 'NULL') !== FALSE);
     $groupsIds = $groups;
+
+    $operator = ['=' => 'IN', '!=' => 'NOT IN'];
+    if (!empty($operator[$op]) && is_array($groups)) {
+      $op = $operator[$op];
+    }
     if (!$isNullOp && !$groups) {
       return NULL;
     }
@@ -3106,16 +3140,15 @@ WHERE  $smartGroupClause
         CRM_Contact_BAO_GroupContactCache::load($group);
       }
     }
-    if ($group->N == 0) {
+    if ($group->N == 0 && $op != 'NOT IN') {
       return NULL;
     }
 
-    if (!$tableAlias) {
-      $tableAlias = "`civicrm_group_contact_cache_";
-      $tableAlias .= ($isNullOp) ? "a`" : implode(',', (array) $groupsIds) . "`";
-    }
-
     $this->_tables[$tableAlias] = $this->_whereTables[$tableAlias] = " LEFT JOIN civicrm_group_contact_cache {$tableAlias} ON {$joinTable}.{$joinColumn} = {$tableAlias}.contact_id ";
+
+    if ($op == 'NOT IN') {
+      return "{$tableAlias}.contact_id NOT IN (SELECT contact_id FROM civicrm_group_contact_cache cgcc WHERE cgcc.group_id IN ( " . implode(',', (array) $groupsIds) . " ) )";
+    }
     return self::buildClause("{$tableAlias}.group_id", $op, $groups, 'Int');
   }
 
@@ -3150,12 +3183,13 @@ WHERE  $smartGroupClause
 
     $op = "LIKE";
     $value = "%{$value}%";
+    $escapedValue = CRM_Utils_Type::escape("%{$value}%", 'String');
 
     $useAllTagTypes = $this->getWhereValues('all_tag_types', $grouping);
     $tagTypesText = $this->getWhereValues('tag_types_text', $grouping);
 
-    $etTable = "`civicrm_entity_tag-" . $value . "`";
-    $tTable = "`civicrm_tag-" . $value . "`";
+    $etTable = "`civicrm_entity_tag-" . uniqid() . "`";
+    $tTable = "`civicrm_tag-" . uniqid() . "`";
 
     if ($useAllTagTypes[2]) {
       $this->_tables[$etTable] = $this->_whereTables[$etTable]
@@ -3163,8 +3197,8 @@ WHERE  $smartGroupClause
             LEFT JOIN civicrm_tag {$tTable} ON ( {$etTable}.tag_id = {$tTable}.id  )";
 
       // search tag in cases
-      $etCaseTable = "`civicrm_entity_case_tag-" . $value . "`";
-      $tCaseTable = "`civicrm_case_tag-" . $value . "`";
+      $etCaseTable = "`civicrm_entity_case_tag-" . uniqid() . "`";
+      $tCaseTable = "`civicrm_case_tag-" . uniqid() . "`";
       $this->_tables[$etCaseTable] = $this->_whereTables[$etCaseTable]
         = " LEFT JOIN civicrm_case_contact ON civicrm_case_contact.contact_id = contact_a.id
             LEFT JOIN civicrm_case
@@ -3173,8 +3207,8 @@ WHERE  $smartGroupClause
             LEFT JOIN civicrm_entity_tag {$etCaseTable} ON ( {$etCaseTable}.entity_table = 'civicrm_case' AND {$etCaseTable}.entity_id = civicrm_case.id )
             LEFT JOIN civicrm_tag {$tCaseTable} ON ( {$etCaseTable}.tag_id = {$tCaseTable}.id  )";
       // search tag in activities
-      $etActTable = "`civicrm_entity_act_tag-" . $value . "`";
-      $tActTable = "`civicrm_act_tag-" . $value . "`";
+      $etActTable = "`civicrm_entity_act_tag-" . uniqid() . "`";
+      $tActTable = "`civicrm_act_tag-" . uniqid() . "`";
       $activityContacts = CRM_Activity_BAO_ActivityContact::buildOptions('record_type_id', 'validate');
       $targetID = CRM_Utils_Array::key('Activity Targets', $activityContacts);
 
@@ -3187,12 +3221,12 @@ WHERE  $smartGroupClause
             LEFT JOIN civicrm_entity_tag as {$etActTable} ON ( {$etActTable}.entity_table = 'civicrm_activity' AND {$etActTable}.entity_id = civicrm_activity.id )
             LEFT JOIN civicrm_tag {$tActTable} ON ( {$etActTable}.tag_id = {$tActTable}.id  )";
 
-      $this->_where[$grouping][] = "({$tTable}.name $op '" . $value . "' OR {$tCaseTable}.name $op '" . $value . "' OR {$tActTable}.name $op '" . $value . "')";
+      $this->_where[$grouping][] = "({$tTable}.name $op '" . $escapedValue . "' OR {$tCaseTable}.name $op '" . $escapedValue . "' OR {$tActTable}.name $op '" . $escapedValue . "')";
       $this->_qill[$grouping][] = ts('Tag %1 %2', array(1 => $tagTypesText[2], 2 => $op)) . ' ' . $value;
     }
     else {
-      $etTable = "`civicrm_entity_tag-" . $value . "`";
-      $tTable = "`civicrm_tag-" . $value . "`";
+      $etTable = "`civicrm_entity_tag-" . uniqid() . "`";
+      $tTable = "`civicrm_tag-" . uniqid() . "`";
       $this->_tables[$etTable] = $this->_whereTables[$etTable] = " LEFT JOIN civicrm_entity_tag {$etTable} ON ( {$etTable}.entity_id = contact_a.id  AND
       {$etTable}.entity_table = 'civicrm_contact' )
                 LEFT JOIN civicrm_tag {$tTable} ON ( {$etTable}.tag_id = {$tTable}.id  ) ";
@@ -3220,20 +3254,25 @@ WHERE  $smartGroupClause
       if (count($value) > 1) {
         $this->_useDistinct = TRUE;
       }
-      $value = implode(',', (array) $value);
     }
+
+    // implode array, then remove all spaces and validate CommaSeparatedIntegers
+    $value = CRM_Utils_Type::validate(
+      str_replace(' ', '', implode(',', (array) $value)),
+      'CommaSeparatedIntegers'
+    );
 
     $useAllTagTypes = $this->getWhereValues('all_tag_types', $grouping);
     $tagTypesText = $this->getWhereValues('tag_types_text', $grouping);
 
-    $etTable = "`civicrm_entity_tag-" . $value . "`";
+    $etTable = "`civicrm_entity_tag-" . uniqid() . "`";
 
     if ($useAllTagTypes[2]) {
       $this->_tables[$etTable] = $this->_whereTables[$etTable]
         = " LEFT JOIN civicrm_entity_tag {$etTable} ON ( {$etTable}.entity_id = contact_a.id  AND {$etTable}.entity_table = 'civicrm_contact') ";
 
       // search tag in cases
-      $etCaseTable = "`civicrm_entity_case_tag-" . $value . "`";
+      $etCaseTable = "`civicrm_entity_case_tag-" . uniqid() . "`";
       $activityContacts = CRM_Activity_BAO_ActivityContact::buildOptions('record_type_id', 'validate');
       $targetID = CRM_Utils_Array::key('Activity Targets', $activityContacts);
 
@@ -3244,7 +3283,7 @@ WHERE  $smartGroupClause
                 AND civicrm_case.is_deleted = 0 )
             LEFT JOIN civicrm_entity_tag {$etCaseTable} ON ( {$etCaseTable}.entity_table = 'civicrm_case' AND {$etCaseTable}.entity_id = civicrm_case.id ) ";
       // search tag in activities
-      $etActTable = "`civicrm_entity_act_tag-" . $value . "`";
+      $etActTable = "`civicrm_entity_act_tag-" . uniqid() . "`";
       $this->_tables[$etActTable] = $this->_whereTables[$etActTable]
         = " LEFT JOIN civicrm_activity_contact
             ON ( civicrm_activity_contact.contact_id = contact_a.id AND civicrm_activity_contact.record_type_id = {$targetID} )
@@ -3528,7 +3567,7 @@ WHERE  $smartGroupClause
    * @param array $values
    */
   public function street_address(&$values) {
-    list($name, $op, $value, $grouping, $wildcard) = $values;
+    list($name, $op, $value, $grouping) = $values;
 
     if (!$op) {
       $op = 'LIKE';
@@ -3921,7 +3960,7 @@ WHERE  $smartGroupClause
    * @param $values
    */
   public function privacy(&$values) {
-    list($name, $op, $value, $grouping, $wildcard) = $values;
+    list($name, $op, $value, $grouping) = $values;
     //fixed for profile search listing CRM-4633
     if (strpbrk($value, "[")) {
       $value = "'{$value}'";
@@ -4881,7 +4920,7 @@ civicrm_relationship.start_date > {$today}
     //      MySQL expect the columns present in GROUP BY, must be present in SELECT clause and that results into error, needless to have other columns.
     //   2. When GROUP BY columns are present then disable FGB otherwise it demands to add ORDER BY columns in GROUP BY and eventually in SELECT
     //     clause. This will impact the search query output.
-    $disableFullGroupByMode = ($sortByChar || !empty($groupByCols));
+    $disableFullGroupByMode = ($sortByChar || !empty($groupByCols) || $groupContacts);
 
     if ($disableFullGroupByMode) {
       CRM_Core_DAO::disableFullGroupByMode();
@@ -4961,7 +5000,7 @@ civicrm_relationship.start_date > {$today}
     $select .= sprintf(", (%s) AS _wgt", $this->createSqlCase('contact_a.id', $cids));
     $where .= sprintf(' AND contact_a.id IN (%s)', implode(',', $cids));
     $order = 'ORDER BY _wgt';
-    $groupBy = '';
+    $groupBy = $this->_useGroupBy ? ' GROUP BY contact_a.id' : '';
     $limit = '';
     $query = "$select $from $where $groupBy $order $limit";
 
