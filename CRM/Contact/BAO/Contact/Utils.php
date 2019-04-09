@@ -226,15 +226,13 @@ WHERE  id IN ( $idString )
     $inputCS = CRM_Utils_Array::value(0, $input);
     $inputTS = CRM_Utils_Array::value(1, $input);
     $inputLF = CRM_Utils_Array::value(2, $input);
-    // If $inputCheck is null, we don't have a checksum to check against, so skip that part.
-    if($inputCheck != null) {
- 
-      $check = self::generateChecksum($contactID, $inputTS, $inputLF);
 
-      if (!hash_equals($check, $inputCheck)) {
-        return FALSE;
-      }
+    $check = self::generateChecksum($contactID, $inputTS, $inputLF);
+
+    if (!hash_equals($check, $inputCheck)) {
+      return FALSE;
     }
+
     // no life limit for checksum
     if ($inputLF == 'inf') {
       return TRUE;
