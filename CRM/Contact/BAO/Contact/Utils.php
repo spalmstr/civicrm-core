@@ -228,8 +228,8 @@ WHERE  id IN ( $idString )
     $inputLF = CRM_Utils_Array::value(2, $input);
 
     $check = self::generateChecksum($contactID, $inputTS, $inputLF);
-
-    if (!hash_equals($check, $inputCheck)) {
+    // By casting $inputCheck as a string we handle the hash_equals function when $inputCheck is null.
+    if (!hash_equals($check, (string)$inputCheck)) {
       return FALSE;
     }
 
