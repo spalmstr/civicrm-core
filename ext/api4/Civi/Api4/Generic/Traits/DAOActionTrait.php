@@ -7,9 +7,6 @@ use Civi\Api4\Query\Api4SelectQuery;
 
 trait DAOActionTrait {
 
-  /* @var array */
-  private $entityFields;
-
   /**
    * @return \CRM_Core_DAO|string
    */
@@ -79,6 +76,15 @@ trait DAOActionTrait {
       $entityId = UtilsArray::value('id', $item);
       FormattingUtil::formatWriteParams($item, $this->getEntityName(), $this->getEntityFields());
       $this->formatCustomParams($item, $entityId);
+      $item['check_permissions'] = $this->getCheckPermissions();
+
+      if ($this->getEntityName() == 'Contact'
+        && array_key_exists('api_key', $item)
+        && !array_key_exists('api_key', $this->getEntityFields())
+        && !($entityId && \CRM_Core_Permission::check('edit own api keys') && \CRM_Core_Session::getLoggedInContactID() == $entityId)
+      ) {
+        throw new \Civi\API\Exception\UnauthorizedException('Permission denied to modify api key');
+      }
 
       // For some reason the contact bao requires this
       if ($entityId && $this->getEntityName() == 'Contact') {
@@ -124,20 +130,6 @@ trait DAOActionTrait {
     \CRM_Utils_Hook::post($hook, $this->getEntityName(), $instance->id, $instance);
 
     return $instance;
-  }
-
-  /**
-   * Returns schema fields for this entity & action.
-   *
-   * @return array
-   * @throws \API_Exception
-   */
-  public function getEntityFields() {
-    if (!$this->entityFields) {
-      $this->entityFields = civicrm_api4($this->getEntityName(), 'getFields', ['action' => $this->getActionName(), 'includeCustom' => FALSE])
-        ->indexBy('name');
-    }
-    return $this->entityFields;
   }
 
   /**
