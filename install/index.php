@@ -63,14 +63,16 @@ global $installURLPath;
 // Set the install type
 // this is sent as a query string when the page is first loaded
 // and subsequently posted to the page as a hidden field
-if (isset($_POST['civicrm_install_type'])) {
+// only permit acceptable installation types to prevent issues;
+$acceptableInstallTypes = ['drupal', 'wordpress', 'backdrop'];
+if (isset($_POST['civicrm_install_type']) && in_array($_POST['civicrm_install_type'], $acceptableInstallTypes)) {
   $installType = $_POST['civicrm_install_type'];
 }
-elseif (isset($_GET['civicrm_install_type'])) {
+elseif (isset($_GET['civicrm_install_type']) && in_array(strtolower($_GET['civicrm_install_type']), $acceptableInstallTypes)) {
   $installType = strtolower($_GET['civicrm_install_type']);
 }
 else {
-  // default value if not set
+  // default value if not set and not an acceptable install type.
   $installType = "drupal";
 }
 
@@ -163,7 +165,7 @@ elseif ($installType == 'backdrop') {
   $object = new CRM_Utils_System_Backdrop();
   $cmsPath = $object->cmsRootPath();
   $siteDir = getSiteDir($cmsPath, $_SERVER['SCRIPT_FILENAME']);
-  $alreadyInstalled = file_exists($cmsPath . CIVICRM_DIRECTORY_SEPARATOR .     'civicrm.settings.php');
+  $alreadyInstalled = file_exists($cmsPath . CIVICRM_DIRECTORY_SEPARATOR . 'civicrm.settings.php');
 }
 elseif ($installType == 'wordpress') {
   $cmsPath = WP_PLUGIN_DIR . DIRECTORY_SEPARATOR . 'civicrm';
@@ -424,7 +426,10 @@ else {
  *  $description[2] - The test error to show, if it goes wrong
  */
 class InstallRequirements {
-  var $errors, $warnings, $tests, $conn;
+  public $errors;
+  public $warnings;
+  public $tests;
+  public $conn;
 
   // @see CRM_Upgrade_Form::MINIMUM_THREAD_STACK
   const MINIMUM_THREAD_STACK = 192;
@@ -517,6 +522,17 @@ class InstallRequirements {
         $onlyRequire
       );
       if ($dbName != 'Drupal' && $dbName != 'Backdrop') {
+        $this->requireNoExistingData(
+          $databaseConfig['server'],
+          $databaseConfig['username'],
+          $databaseConfig['password'],
+          $databaseConfig['database'],
+          array(
+            ts("MySQL %1 Configuration", array(1 => $dbName)),
+            ts("Does the database have data from a previous installation?"),
+            ts("CiviCRM data from previous installation exists in '%1'.", array(1 => $databaseConfig['database'])),
+          )
+        );
         $this->requireMySQLInnoDB($databaseConfig['server'],
           $databaseConfig['username'],
           $databaseConfig['password'],
@@ -1159,7 +1175,6 @@ class InstallRequirements {
     mysqli_query($conn, 'DROP TABLE civicrm_install_temp_table_test');
   }
 
-
   /**
    * @param $server
    * @param string $username
@@ -1263,7 +1278,8 @@ class InstallRequirements {
       return;
     }
 
-    $result = mysqli_query($conn, "SHOW VARIABLES LIKE 'thread_stack'"); // bytes => kb
+    // bytes => kb
+    $result = mysqli_query($conn, "SHOW VARIABLES LIKE 'thread_stack'");
     if (!$result) {
       $testDetails[2] = ts('Could not get information about the thread_stack of the database.');
       $this->error($testDetails);
@@ -1275,6 +1291,37 @@ class InstallRequirements {
         $this->error($testDetails);
       }
     }
+  }
+
+  /**
+   * @param $server
+   * @param $username
+   * @param $password
+   * @param $database
+   * @param $testDetails
+   */
+  public function requireNoExistingData(
+    $server,
+    $username,
+    $password,
+    $database,
+    $testDetails
+  ) {
+    $this->testing($testDetails);
+    $conn = $this->connect($server, $username, $password);
+
+    @mysqli_select_db($conn, $database);
+    $contactRecords = mysqli_query($conn, "SELECT count(*) as contactscount FROM civicrm_contact");
+    if ($contactRecords) {
+      $contactRecords = mysqli_fetch_object($contactRecords);
+      if ($contactRecords->contactscount > 0) {
+        $this->error($testDetails);
+        return;
+      }
+    }
+
+    $testDetails[3] = ts('CiviCRM data from previous installation does not exist in %1.', array(1 => $database));
+    $this->testing($testDetails);
   }
 
   /**
@@ -1477,6 +1524,7 @@ class InstallRequirements {
  * Class Installer
  */
 class Installer extends InstallRequirements {
+
   /**
    * @param $server
    * @param $username
@@ -1687,10 +1735,9 @@ class Installer extends InstallRequirements {
         //change the default language to one chosen
         if (isset($config['seedLanguage']) && $config['seedLanguage'] != 'en_US') {
           civicrm_api3('Setting', 'create', array(
-              'domain_id' => 'current_domain',
-              'lcMessages' => $config['seedLanguage'],
-            )
-          );
+            'domain_id' => 'current_domain',
+            'lcMessages' => $config['seedLanguage'],
+          ));
         }
 
         $output .= '</ul>';
