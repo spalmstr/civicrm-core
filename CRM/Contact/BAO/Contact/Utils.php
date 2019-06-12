@@ -229,7 +229,7 @@ WHERE  id IN ( $idString )
 
     $check = self::generateChecksum($contactID, $inputTS, $inputLF);
 
-    if (!hash_equals($check, $inputCheck)) {
+    if (!hash_equals($check, (string) $inputCheck)) {
       return FALSE;
     }
 
