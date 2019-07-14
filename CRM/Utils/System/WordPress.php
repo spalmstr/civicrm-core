@@ -401,7 +401,8 @@ class CRM_Utils_System_WordPress extends CRM_Utils_System_Base {
    * Determine the native ID of the CMS user.
    *
    * @param string $username
-   * @return int|NULL
+   *
+   * @return int|null
    */
   public function getUfId($username) {
     $userdata = get_user_by('login', $username);
@@ -860,6 +861,21 @@ class CRM_Utils_System_WordPress extends CRM_Utils_System_Base {
       'contactMatching' => $contactMatching,
       'contactCreated' => $contactCreated,
     ];
+  }
+
+  /**
+   * Send an HTTP Response base on PSR HTTP RespnseInterface response.
+   *
+   * @param \Psr\Http\Message\ResponseInterface $response
+   */
+  public function sendResponse(\Psr\Http\Message\ResponseInterface $response) {
+    // use WordPress function status_header to ensure 404 response is sent
+    status_header($response->getStatusCode());
+    foreach ($response->getHeaders() as $name => $values) {
+      CRM_Utils_System::setHttpHeader($name, implode(', ', (array) $values));
+    }
+    echo $response->getBody();
+    CRM_Utils_System::civiExit();
   }
 
 }
