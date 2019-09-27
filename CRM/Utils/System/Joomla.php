@@ -562,7 +562,7 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
     if (!defined('_JEXEC') && $loadDefines) {
       define('_JEXEC', 1);
       define('DS', DIRECTORY_SEPARATOR);
-      define('JPATH_BASE', $joomlaBase . DS . 'administrator');
+      define('JPATH_BASE', $joomlaBase . '/administrator');
       require $joomlaBase . '/administrator/includes/defines.php';
     }
 
