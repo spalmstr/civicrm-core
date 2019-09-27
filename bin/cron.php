@@ -24,9 +24,17 @@
  | see the CiviCRM license FAQ at http://civicrm.org/licensing        |
  +--------------------------------------------------------------------+
  */
+// Push parameters into $_REQUEST 
+ foreach( $argv as $argument ) {
+        if( $argument == $argv[ 0 ] ) continue;
 
-
-require_once '../civicrm.config.php';
+        $pair = explode( "=", $argument );
+        $variableName = substr( $pair[ 0 ], 2 );
+        $variableValue = $pair[ 1 ];
+        // Store the variable in $_REQUEST
+        $_REQUEST[ $variableName ] = $variableValue;
+}
+require_once __DIR__ . '/../civicrm.config.php';
 require_once 'CRM/Core/Config.php';
 require_once 'CRM/Utils/Request.php';
 $config = CRM_Core_Config::singleton();
