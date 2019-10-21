@@ -562,7 +562,7 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
     if (!defined('_JEXEC') && $loadDefines) {
       define('_JEXEC', 1);
       define('DS', DIRECTORY_SEPARATOR);
-      define('JPATH_BASE', $joomlaBase . DS. 'administrator'); // to make sure we analyse correctly in the Windows environment
+      define('JPATH_BASE', $joomlaBase . '/administrator');
       require $joomlaBase . '/administrator/includes/defines.php';
     }
 
@@ -834,23 +834,6 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
   }
 
   /**
-   * Output code from error function.
-   * @param string $content
-   */
-  public function outputError($content) {
-    if (class_exists('JErrorPage')) {
-      $error = new Exception($content);
-      JErrorPage::render($error);
-    }
-    elseif (class_exists('JError')) {
-      JError::raiseError('CiviCRM-001', $content);
-    }
-    else {
-      parent::outputError($content);
-    }
-  }
-
-  /**
    * @inheritDoc
    */
   public function synchronizeUsers() {
@@ -896,9 +879,6 @@ class CRM_Utils_System_Joomla extends CRM_Utils_System_Base {
       }
       else {
         $contactMatching++;
-      }
-      if (is_object($match)) {
-        $match->free();
       }
     }
 
