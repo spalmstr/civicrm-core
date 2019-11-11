@@ -172,7 +172,7 @@ class CRM_Mailing_DAO_MailingJob extends CRM_Core_DAO {
           'bao' => 'CRM_Mailing_BAO_MailingJob',
           'localizable' => 0,
         ],
-        'mailing_job_start_date' => [
+        'start_date' => [
           'name' => 'start_date',
           'type' => CRM_Utils_Type::T_TIMESTAMP,
           'title' => ts('Mailing Job Start Date'),
