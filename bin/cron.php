@@ -25,14 +25,14 @@
  +--------------------------------------------------------------------+
  */
 
-
+error_log("Starting cron.php...");
 require_once '../civicrm.config.php';
 require_once 'CRM/Core/Config.php';
 require_once 'CRM/Utils/Request.php';
 $config = CRM_Core_Config::singleton();
-
+error_log("Authenticating...");
 CRM_Utils_System::authenticateScript(TRUE);
-
+error_log("Authenticated, getting jobs...");
 $job = CRM_Utils_Request::retrieve('job', 'String', CRM_Core_DAO::$_nullArray, FALSE, NULL, 'REQUEST');
 
 require_once 'CRM/Core/JobManager.php';
@@ -52,3 +52,4 @@ else {
   $facility->setSingleRunParams('job', $job, $params, 'From cron.php');
   $facility->executeJobByAction('job', $job);
 }
+error_log("cron.php finished");
