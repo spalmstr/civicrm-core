@@ -477,8 +477,7 @@ class CRM_Core_I18n_Schema {
    * @return array
    *   array of CREATE INDEX queries
    */
-  //CRM-1812 - Make public so we can call it from the Logging schema.php
-  public static function createViewQuery($locale, $table, &$dao, $class = 'CRM_Core_I18n_SchemaStructure', $isUpgradeMode = FALSE) {
+  private static function createViewQuery($locale, $table, &$dao, $class = 'CRM_Core_I18n_SchemaStructure', $isUpgradeMode = FALSE) {
     $columns =& $class::columns();
     $cols = [];
     $tableCols = [];
