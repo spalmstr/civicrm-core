@@ -21,6 +21,9 @@
     <tr class="crm-custom-field-form-block-data_type">
       <td class="label">{$form.data_type.label}</td>
       <td class="html-adjust">{$form.data_type.html}
+        {if $action neq 1 && $form.data_type.value[1][0] eq "Select" && $form.serialize.value}
+          <span>({ts}Multi-Select{/ts})</span>
+        {/if}
         {if $action neq 4 and $action neq 2}
           <br /><span class="description">{ts}Select the type of data you want to collect and store for this contact. Then select from the available HTML input field types (choices are based on the type of data being collected).{/ts}</span>
         {/if}
@@ -34,10 +37,12 @@
         {/if}
       </td>
     </tr>
-    <tr class="crm-custom-field-form-block-serialize">
-      <td class="label">{$form.serialize.label}</td>
-      <td class="html-adjust">{$form.serialize.html}</td>
-    </tr>
+    {if $action eq 1}
+      <tr class="crm-custom-field-form-block-serialize">
+        <td class="label">{$form.serialize.label}</td>
+        <td class="html-adjust">{$form.serialize.html}</td>
+      </tr>
+    {/if}
     {if $form.in_selector}
       <tr class='crm-custom-field-form-block-in_selector'>
         <td class='label'>{$form.in_selector.label}</td>
@@ -72,7 +77,7 @@
         {$form.filter.html}
         &nbsp;&nbsp;<span><a class="crm-hover-button toggle-contact-ref-mode" href="#Group">{ts}Filter by Group{/ts}</a></span>
         <br />
-        <span class="description">{ts}Filter contact search results for this field using Contact get API parameters. EXAMPLE: To list Students in group 3:{/ts} "action=get&group=3&contact_sub_type=Student" {docURL page="Using the API" resource="wiki"}</span>
+        <span class="description">{ts}Filter contact search results for this field using Contact get API parameters. EXAMPLE: To list Students in group 3:{/ts} "action=get&group=3&contact_sub_type=Student" {docURL page="dev/api"}</span>
       </td>
     </tr>
     <tr class="crm-custom-field-form-block-options_per_line" id="optionsPerLine" {if $action neq 2 && ($form.data_type.value.0.0 >= 4 && $form.data_type.value.1.0 neq 'CheckBox' || $form.data_type.value.1.0 neq 'Radio' )}class="hiddenElement"{/if}>
