@@ -480,12 +480,12 @@ class CRM_Event_Form_Participant extends CRM_Contribute_Form_AbstractEditPayment
       $statuses = array_flip(CRM_Event_PseudoConstant::participantStatus());
       $defaults[$this->_id]['status_id'] = $statuses['Registered'] ?? NULL;
       if (!empty($defaults[$this->_id]['event_id'])) {
-        $financialTypeID = CRM_Core_DAO::getFieldValue('CRM_Event_DAO_Event',
+        $contributionTypeId = CRM_Core_DAO::getFieldValue('CRM_Event_DAO_Event',
           $defaults[$this->_id]['event_id'],
           'financial_type_id'
         );
-        if ($financialTypeID) {
-          $defaults[$this->_id]['financial_type_id'] = $financialTypeID;
+        if ($contributionTypeId) {
+          $defaults[$this->_id]['financial_type_id'] = $contributionTypeId;
         }
       }
 
