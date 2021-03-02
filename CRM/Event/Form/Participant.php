@@ -272,11 +272,6 @@ class CRM_Event_Form_Participant extends CRM_Contribute_Form_AbstractEditPayment
     $this->_showFeeBlock = $_GET['eventId'] ?? NULL;
     $this->assign('showFeeBlock', FALSE);
     $this->assign('feeBlockPaid', FALSE);
-    if ($this->_contactID == NULL) {
-      // If we haven't got the contact ID, try to get it.
-      $this->_pId = CRM_Utils_Request::retrieve('participantId', 'Positive', $this);
-      $this->_contactID = CRM_Core_DAO::getFieldValue('CRM_Event_BAO_Participant', $this->_pId, 'contact_id');
-    };
 
     // @todo eliminate this duplication.
     $this->_contactId = $this->_contactID;
